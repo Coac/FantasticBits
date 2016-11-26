@@ -53,12 +53,20 @@ while (true) {
   printErr(JSON.stringify(snaffles));
 
   for (var i = 0; i < 2; i++) {
-        // Write an action using print()
-        // To debug: printErr('Debug messages...');
+    // Write an action using print()
+    // To debug: printErr('Debug messages...');
 
-        // Edit this line to indicate the action for each wizard (0 ≤ thrust ≤ 150, 0 ≤ power ≤ 500)
-        // i.e.: "MOVE x y thrust" or "THROW x y power"
-    print('MOVE 8000 3750 100');
-        // print('THROW 0 3650 100');
+    // Edit this line to indicate the action for each wizard (0 ≤ thrust ≤ 150, 0 ≤ power ≤ 500)
+    // i.e.: "MOVE x y thrust" or "THROW x y power"
+
+    move(8000, 3750, 100);
   }
+}
+
+function move(x, y, trust) {
+  print('MOVE ' + x + ' ' + y + ' ' + trust);
+}
+
+function throw(x, y, trust) {
+  print('THROW ' + x + ' ' + y + ' ' + trust);
 }

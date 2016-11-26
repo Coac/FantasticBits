@@ -75,11 +75,13 @@ while (true) {
     if (wizard.isHoldingSnaffe) {
       throwSnaffle(xToScore, 3650, 500);
     } else {
-      if (energy >= 10) {
-        petrificus(getclosestEntity(wizard.x, wizard.y, enemyWizards).id);
+      var bludger = getclosestEntity(wizard.x, wizard.y, bludgers);
+      if (energy >= 5 && getDistance(bludger.x, bludger.y, wizard.x, wizard.y) < 1500) {
+        obliviate(bludger.id);
       } else {
         var closestSnaff = getclosestEntity(wizard.x, wizard.y, snaffles);
-        move(closestSnaff.x, closestSnaff.y, 150);
+        var distanceWizSnaf = getDistance(closestSnaff.x, closestSnaff.y, wizard.x, wizard.y);
+        move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
       }
     }
   }

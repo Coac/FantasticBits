@@ -5,12 +5,15 @@
 
 var myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
 var xToScore = myTeamId === 1 ? 0 : 15975;
-
+var energy = 0;
 // game loop
 while (true) {
   var wizards = [];
   var enemyWizards = [];
   var snaffles = [];
+  var bludgers = [];
+
+  ++energy;
 
   var entities = parseInt(readline()); // number of entities still in game
   for (var i = 0; i < entities; i++) {
@@ -22,7 +25,7 @@ while (true) {
     var vx = parseInt(inputs[4]); // velocity
     var vy = parseInt(inputs[5]); // velocity
     var state = parseInt(inputs[6]); // 1 if the wizard is holding a Snaffle, 0 otherwise
-    debug(state);
+
     if (entityType === 'WIZARD') {
       wizards.push({
         id: entityId,
@@ -49,9 +52,16 @@ while (true) {
         vx,
         vy
       });
+    } else if (entityType === 'BLUDGER') {
+      bludgers.push({
+        id: entityId,
+        x,
+        y,
+        vx,
+        vy
+      });
     }
   }
-  debug(getclosestEntity(10, 10, snaffles));
 
   for (var i = 0; i < wizards.length; i++) {
     // Write an action using print()
@@ -65,8 +75,12 @@ while (true) {
     if (wizard.isHoldingSnaffe) {
       throwSnaffle(xToScore, 3650, 500);
     } else {
-      var closestSnaff = getclosestEntity(wizard.x, wizard.y, snaffles);
-      move(closestSnaff.x, closestSnaff.y, 150);
+      if (energy >= 10) {
+        petrificus(getclosestEntity(wizard.x, wizard.y, enemyWizards).id);
+      } else {
+        var closestSnaff = getclosestEntity(wizard.x, wizard.y, snaffles);
+        move(closestSnaff.x, closestSnaff.y, 150);
+      }
     }
   }
 }
@@ -79,7 +93,22 @@ function move (x, y, trust) {
 function throwSnaffle (x, y, trust) {
   print('THROW ' + x + ' ' + y + ' ' + trust);
 }
-
+function obliviate (entityId) {
+  launchSpell('OBLIVIATE', entityId, 5);
+}
+function petrificus (entityId) {
+  launchSpell('PETRIFICUS', entityId, 10);
+}
+function accio (entityId) {
+  launchSpell('ACCIO', entityId, 20);
+}
+function flipendo (entityId) {
+  launchSpell('FLIPENDO', entityId, 20);
+}
+function launchSpell (name, entityId, energyCost) {
+  print(name + ' ' + entityId);
+  energy -= energyCost;
+}
 // Logs
 function debug (input) {
   printErr(JSON.stringify(input));

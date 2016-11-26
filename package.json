@@ -1,0 +1,31 @@
+{
+  "name": "fantastic-bits",
+  "version": "0.0.1",
+  "description": "Codingame Fantastic Bits AI in javascript",
+  "main": "ai.js",
+  "scripts": {
+    "lint": "eslint ai.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Coac/FantasticBits.git"
+  },
+  "keywords": [
+    "codingame",
+    "fantasticbits",
+    "ai"
+  ],
+  "author": "Victor Le",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Coac/FantasticBits/issues"
+  },
+  "homepage": "https://github.com/Coac/FantasticBits#readme",
+  "devDependencies": {
+    "eslint": "^3.9.1",
+    "eslint-config-semistandard": "^7.0.0",
+    "eslint-config-standard": "^6.2.1",
+    "eslint-plugin-promise": "^3.3.0",
+    "eslint-plugin-standard": "^2.0.1"
+  }
+}

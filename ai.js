@@ -4,6 +4,7 @@
  **/
 
 var myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
+var xToScore = myTeamId === 1 ? 0 : 15975;
 
 // game loop
 while (true) {
@@ -21,7 +22,7 @@ while (true) {
     var vx = parseInt(inputs[4]); // velocity
     var vy = parseInt(inputs[5]); // velocity
     var state = parseInt(inputs[6]); // 1 if the wizard is holding a Snaffle, 0 otherwise
-
+    debug(state);
     if (entityType === 'WIZARD') {
       wizards.push({
         id: entityId,
@@ -50,23 +51,56 @@ while (true) {
       });
     }
   }
-  printErr(JSON.stringify(snaffles));
+  debug(getclosestEntity(10, 10, snaffles));
 
-  for (var i = 0; i < 2; i++) {
+  for (var i = 0; i < wizards.length; i++) {
     // Write an action using print()
     // To debug: printErr('Debug messages...');
 
     // Edit this line to indicate the action for each wizard (0 ≤ thrust ≤ 150, 0 ≤ power ≤ 500)
     // i.e.: "MOVE x y thrust" or "THROW x y power"
 
-    move(8000, 3750, 100);
+    var wizard = wizards[i];
+
+    if (wizard.isHoldingSnaffe) {
+      throwSnaffle(xToScore, 3650, 500);
+    } else {
+      var closestSnaff = getclosestEntity(wizard.x, wizard.y, snaffles);
+      move(closestSnaff.x, closestSnaff.y, 150);
+    }
   }
 }
 
+// Outputs functions
 function move (x, y, trust) {
   print('MOVE ' + x + ' ' + y + ' ' + trust);
 }
 
 function throwSnaffle (x, y, trust) {
-  print('MOVE ' + x + ' ' + y + ' ' + trust);
+  print('THROW ' + x + ' ' + y + ' ' + trust);
+}
+
+// Logs
+function debug (input) {
+  printErr(JSON.stringify(input));
+}
+
+// Maths functions
+function getDistance (x1, y1, x2, y2) {
+  return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
+
+// Utils functions
+function getclosestEntity (x, y, entities) {
+  var closestEntity = null;
+  var minDist = Infinity;
+
+  entities.forEach(function (entity) {
+    var distance = getDistance(x, y, entity.x, entity.y);
+    if (distance < minDist) {
+      minDist = distance;
+      closestEntity = entity;
+    }
+  });
+  return closestEntity;
 }

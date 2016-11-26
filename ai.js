@@ -63,10 +63,10 @@ while (true) {
   }
 }
 
-function move(x, y, trust) {
+function move (x, y, trust) {
   print('MOVE ' + x + ' ' + y + ' ' + trust);
 }
 
-function throw(x, y, trust) {
-  print('THROW ' + x + ' ' + y + ' ' + trust);
+function throwSnaffle (x, y, trust) {
+  print('MOVE ' + x + ' ' + y + ' ' + trust);
 }

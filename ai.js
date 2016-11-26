@@ -21,12 +21,36 @@ while (true) {
     var vx = parseInt(inputs[4]); // velocity
     var vy = parseInt(inputs[5]); // velocity
     var state = parseInt(inputs[6]); // 1 if the wizard is holding a Snaffle, 0 otherwise
-    printErr(entityType);
 
     if (entityType === 'WIZARD') {
-      wizards.push({id: entityId});
+      wizards.push({
+        id: entityId,
+        x,
+        y,
+        vx,
+        vy,
+        isHoldingSnaffe: state === 1
+      });
+    } else if (entityType === 'OPPONENT_WIZARD') {
+      enemyWizards.push({
+        id: entityId,
+        x,
+        y,
+        vx,
+        vy,
+        isHoldingSnaffe: state === 1
+      });
+    } else if (entityType === 'SNAFFLE') {
+      snaffles.push({
+        id: entityId,
+        x,
+        y,
+        vx,
+        vy
+      });
     }
   }
+  printErr(JSON.stringify(snaffles));
 
   for (var i = 0; i < 2; i++) {
         // Write an action using print()

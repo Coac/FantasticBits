@@ -5,8 +5,8 @@
 
 var myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
 
-var leftGoal = {x: 0, y: 3650};
-var rightGoal = {x: 15975, y: 3650};
+var leftGoal = {x: 0, y: 3750};
+var rightGoal = {x: 16000, y: 3750};
 var goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 var goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 

@@ -3,12 +3,20 @@
  * Move towards a Snaffle and use your team id to determine where you need to throw it.
  **/
 
-var myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
+const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
 
-var leftGoal = {x: 0, y: 3750};
-var rightGoal = {x: 16000, y: 3750};
-var goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
-var goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
+const leftGoal = {
+  center: {x: 0, y: 3750},
+  point1: {x: 0, y: 1750},
+  point2: {x: 0, y: 5750}
+};
+const rightGoal = {
+  center: {x: 16000, y: 3750},
+  point1: {x: 16000, y: 1750},
+  point2: {x: 16000, y: 5750}
+};
+const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
+const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 
 var energy = 0;
 // game loop
@@ -73,10 +81,10 @@ while (true) {
     let wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
-      throwSnaffle(goalToScore.x, goalToScore.y, 500);
+      throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
     } else {
       if (energy >= 20) {
-        const closestSnaffleGoal = getclosestEntity(goalToProtect, snaffles).entity;
+        const closestSnaffleGoal = getclosestEntity(goalToProtect.center, snaffles).entity;
         accio(closestSnaffleGoal.id);
       } else {
         let closestSnaff = wizard.closestSnaffData.entity;

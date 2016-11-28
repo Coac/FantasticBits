@@ -63,33 +63,9 @@ while (true) {
     }
   }
 
-  for (var i = 0; i < wizards.length; i++) {
-    var wizard = wizards[i];
-    wizard.closestSnaffData = getclosestSnaffNotTargeted(wizard);
-  }
-
-  if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {
-    var wizardWithRightTarget = null;
-    var wizardNeedChangeTarget = null;
-    if (wizards[0].closestSnaffData.distance > wizards[1].closestSnaffData.distance) {
-      wizardWithRightTarget = wizards[1];
-      wizardNeedChangeTarget = wizards[0];
-    } else {
-      wizardWithRightTarget = wizards[0];
-      wizardNeedChangeTarget = wizards[1];
-    }
-    wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
-    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargeted(wizardNeedChangeTarget);
-    wizardNeedChangeTarget.closestSnaffData.entity.targetedBy = wizardNeedChangeTarget;
-  }
+  setClosestSnaffleData();
 
   for (var i = 0; i < wizards.length; i++) {
-    // Write an action using print()
-    // To debug: printErr('Debug messages...');
-
-    // Edit this line to indicate the action for each wizard (0 ≤ thrust ≤ 150, 0 ≤ power ≤ 500)
-    // i.e.: "MOVE x y thrust" or "THROW x y power"
-
     var wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
@@ -177,4 +153,26 @@ function getclosestSnaffNotTargeted (wizard) {
     closestSnaff.targetedBy = wizard;
   }
   return {distance: minDist, entity: closestSnaff};
+}
+
+function setClosestSnaffleData () {
+  for (var i = 0; i < wizards.length; i++) {
+    var wizard = wizards[i];
+    wizard.closestSnaffData = getclosestSnaffNotTargeted(wizard);
+  }
+
+  if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {
+    var wizardWithRightTarget = null;
+    var wizardNeedChangeTarget = null;
+    if (wizards[0].closestSnaffData.distance > wizards[1].closestSnaffData.distance) {
+      wizardWithRightTarget = wizards[1];
+      wizardNeedChangeTarget = wizards[0];
+    } else {
+      wizardWithRightTarget = wizards[0];
+      wizardNeedChangeTarget = wizards[1];
+    }
+    wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
+    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargeted(wizardNeedChangeTarget);
+    wizardNeedChangeTarget.closestSnaffData.entity.targetedBy = wizardNeedChangeTarget;
+  }
 }

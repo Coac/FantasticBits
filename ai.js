@@ -64,6 +64,26 @@ while (true) {
   }
 
   for (var i = 0; i < wizards.length; i++) {
+    var wizard = wizards[i];
+    wizard.closestSnaffData = getclosestSnaffNotTargeted(wizard);
+  }
+
+  if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {
+    var wizardWithRightTarget = null;
+    var wizardNeedChangeTarget = null;
+    if (wizards[0].closestSnaffData.distance > wizards[1].closestSnaffData.distance) {
+      wizardWithRightTarget = wizards[1];
+      wizardNeedChangeTarget = wizards[0];
+    } else {
+      wizardWithRightTarget = wizards[0];
+      wizardNeedChangeTarget = wizards[1];
+    }
+    wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
+    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargeted(wizardNeedChangeTarget);
+    wizardNeedChangeTarget.closestSnaffData.entity.targetedBy = wizardNeedChangeTarget;
+  }
+
+  for (var i = 0; i < wizards.length; i++) {
     // Write an action using print()
     // To debug: printErr('Debug messages...');
 
@@ -79,10 +99,13 @@ while (true) {
       if (energy >= 5 && getDistance(bludger.x, bludger.y, wizard.x, wizard.y) < 1500) {
         obliviate(bludger.id);
       } else {
-        var closestSnaff = getclosestSnaffNotTargeted(wizard);
-        var distanceWizSnaf = getDistance(closestSnaff.x, closestSnaff.y, wizard.x, wizard.y);
-        move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
-        closestSnaff.targetedBy = wizard;
+        var closestSnaff = wizard.closestSnaffData.entity;
+        var distanceWizSnaf = wizard.closestSnaffData.distance;
+        if (closestSnaff) {
+          move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
+        } else {
+          move(0, 0, 150); // TODO : PLACEHOLDER
+        }
       }
     }
   }
@@ -134,7 +157,7 @@ function getclosestEntity (x, y, entities) {
       closestEntity = entity;
     }
   });
-  return closestEntity;
+  return {distance: minDist, entity: closestEntity};
 }
 
 function getclosestSnaffNotTargeted (wizard) {
@@ -153,5 +176,5 @@ function getclosestSnaffNotTargeted (wizard) {
   if (closestSnaff != null) {
     closestSnaff.targetedBy = wizard;
   }
-  return closestSnaff;
+  return {distance: minDist, entity: closestSnaff};
 }

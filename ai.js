@@ -74,7 +74,7 @@ while (true) {
     if (wizard.isHoldingSnaffe) {
       throwSnaffle(goalToScore.x, goalToScore.y, 500);
     } else {
-      var closestSnaffleGoal = getclosestEntity(goalToProtect.x, goalToProtect.y, snaffles).entity;
+      var closestSnaffleGoal = getclosestEntity(goalToProtect, snaffles).entity;
       if (energy >= 20) {
         accio(closestSnaffleGoal.id);
       } else {
@@ -122,17 +122,21 @@ function debug (input) {
 }
 
 // Maths functions
-function getDistance (x1, y1, x2, y2) {
+function getDistance (pos1, pos2) {
+  var x1 = pos1.x;
+  var y1 = pos1.y;
+  var x2 = pos2.x;
+  var y2 = pos2.y;
   return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
 // Utils functions
-function getclosestEntity (x, y, entities) {
+function getclosestEntity (pos, entities) {
   var closestEntity = null;
   var minDist = Infinity;
 
   entities.forEach(function (entity) {
-    var distance = getDistance(x, y, entity.x, entity.y);
+    var distance = getDistance(pos, entity);
     if (distance < minDist) {
       minDist = distance;
       closestEntity = entity;
@@ -147,14 +151,14 @@ function getclosestSnaffNotTargeted (wizard) {
 
   snaffles.forEach(function (snaffle) {
     if (!snaffle.targetedBy) {
-      var distance = getDistance(wizard.x, wizard.y, snaffle.x, snaffle.y);
+      var distance = getDistance(wizard, snaffle);
       if (distance < minDist) {
         minDist = distance;
         closestSnaff = snaffle;
       }
     }
   });
-  if (closestSnaff != null) {
+  if (closestSnaff !== null) {
     closestSnaff.targetedBy = wizard;
   }
   return {distance: minDist, entity: closestSnaff};

@@ -79,9 +79,10 @@ while (true) {
       if (energy >= 5 && getDistance(bludger.x, bludger.y, wizard.x, wizard.y) < 1500) {
         obliviate(bludger.id);
       } else {
-        var closestSnaff = getclosestEntity(wizard.x, wizard.y, snaffles);
+        var closestSnaff = getclosestSnaffNotTargeted(wizard);
         var distanceWizSnaf = getDistance(closestSnaff.x, closestSnaff.y, wizard.x, wizard.y);
         move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
+        closestSnaff.targetedBy = wizard;
       }
     }
   }
@@ -134,4 +135,23 @@ function getclosestEntity (x, y, entities) {
     }
   });
   return closestEntity;
+}
+
+function getclosestSnaffNotTargeted (wizard) {
+  var closestSnaff = null;
+  var minDist = Infinity;
+
+  snaffles.forEach(function (snaffle) {
+    if (!snaffle.targetedBy) {
+      var distance = getDistance(wizard.x, wizard.y, snaffle.x, snaffle.y);
+      if (distance < minDist) {
+        minDist = distance;
+        closestSnaff = snaffle;
+      }
+    }
+  });
+  if (closestSnaff != null) {
+    closestSnaff.targetedBy = wizard;
+  }
+  return closestSnaff;
 }

@@ -16,3 +16,6 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 ### Silver League
 - Ally wizards do not target the same snaffle
 - Use of Accio on the nearest snaffle of the ally goal
+
+## Road to Gold
+- *Use petrificus to prevent a snaffle to enter inside our goal* (Experimental : drop the ranking)

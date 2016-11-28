@@ -74,8 +74,16 @@ while (true) {
     }
   }
 
-  setClosestSnaffleData();
+  // Logging info
+  snaffles.forEach(function (snaffle) {
+    debug(snaffle);
+    if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
+                          goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+      debug('Snaffle ' + snaffle.id + ' risk to goal');
+    }
+  });
 
+  setClosestSnaffleData();
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
@@ -83,6 +91,21 @@ while (true) {
     if (wizard.isHoldingSnaffe) {
       throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
     } else {
+      /*
+      let action = false;
+      if (energy >= 10) {
+        snaffles.forEach(function (snaffle) {
+          if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
+                                goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+            petrificus(snaffle.id);
+            action = true;
+            return false;
+          }
+        });
+      }
+
+      if (action) continue;
+      */
       if (energy >= 20) {
         const closestSnaffleGoal = getclosestEntity(goalToProtect.center, snaffles).entity;
         accio(closestSnaffleGoal.id);

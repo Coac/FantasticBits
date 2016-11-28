@@ -4,7 +4,12 @@
  **/
 
 var myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-var xToScore = myTeamId === 1 ? 0 : 15975;
+
+var leftGoal = {x: 0, y: 3650};
+var rightGoal = {x: 15975, y: 3650};
+var goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
+var goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
+
 var energy = 0;
 // game loop
 while (true) {
@@ -12,8 +17,6 @@ while (true) {
   var enemyWizards = [];
   var snaffles = [];
   var bludgers = [];
-
-  ++energy;
 
   var entities = parseInt(readline()); // number of entities still in game
   for (var i = 0; i < entities; i++) {
@@ -69,11 +72,11 @@ while (true) {
     var wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
-      throwSnaffle(xToScore, 3650, 500);
+      throwSnaffle(goalToScore.x, goalToScore.y, 500);
     } else {
-      var bludger = getclosestEntity(wizard.x, wizard.y, bludgers);
-      if (energy >= 5 && getDistance(bludger.x, bludger.y, wizard.x, wizard.y) < 1500) {
-        obliviate(bludger.id);
+      var closestSnaffleGoal = getclosestEntity(goalToProtect.x, goalToProtect.y, snaffles).entity;
+      if (energy >= 20) {
+        accio(closestSnaffleGoal.id);
       } else {
         var closestSnaff = wizard.closestSnaffData.entity;
         var distanceWizSnaf = wizard.closestSnaffData.distance;
@@ -85,6 +88,8 @@ while (true) {
       }
     }
   }
+
+  ++energy;
 }
 
 // Outputs functions

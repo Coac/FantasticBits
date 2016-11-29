@@ -18,6 +18,12 @@ const rightGoal = {
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 
+const friction = {
+  snaffle: 0.75,
+  bludger: 0.9,
+  wizard: 0.75
+};
+
 var energy = 0;
 // game loop
 while (true) {
@@ -74,14 +80,7 @@ while (true) {
     }
   }
 
-  // Logging info
-  snaffles.forEach(function (snaffle) {
-    debug(snaffle);
-    if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
-                          goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
-      debug('Snaffle ' + snaffle.id + ' risk to goal');
-    }
-  });
+  setSnaffleWillGoal();
 
   setClosestSnaffleData();
 
@@ -191,6 +190,11 @@ function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
   return true;
 }
 
+// Round half away from zero
+function round (nb) {
+  return nb.toFixed(0);
+}
+
 // Utils functions
 function getclosestEntity (pos, entities) {
   let closestEntity = null;
@@ -282,4 +286,35 @@ function checkAccio (wizard) {
     wizard.action = accio(snaffle.id);
     return true;
   }
+
+  return false;
+}
+
+/*
+* Set snaffle.needStop to true if the snaffle will enter
+* to goalToProtect according to his velocity
+* Set snaffle.willGoal to true if the snaffle will enter
+* to goalToScore according to his velocity
+*/
+function setSnaffleWillGoal () {
+  snaffles.forEach(function (snaffle) {
+    let newVelocity = {x: snaffle.vx, y: snaffle.vy};
+    let newPos = {x: snaffle.x, y: snaffle.y};
+
+    while (Math.abs(newVelocity.x) + Math.abs(newVelocity.y) > 300) {
+      newPos = {x: parseFloat(newPos.x) + parseFloat(newVelocity.x), y: parseFloat(newPos.y) + parseFloat(newVelocity.y)};
+      newVelocity = {x: round(newVelocity.x * friction.snaffle), y: round(newVelocity.y * friction.snaffle)};
+    }
+
+    if (lineIntersect(snaffle.x, snaffle.y, newPos.x, newPos.y,
+                          goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+      debug('Snaffle ' + snaffle.id + ' risk, need to be stopped');
+      snaffle.needStop = true;
+    } else if (lineIntersect(snaffle.x, snaffle.y, newPos.x, newPos.y,
+                          goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
+      debug('Snaffle ' + snaffle.id + ' will goal :)');
+      snaffle.willGoal = true;
+    }
+  });
+}
 }

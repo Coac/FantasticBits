@@ -19,3 +19,6 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 
 ## Road to Gold
 - *Use petrificus to prevent a snaffle to enter inside our goal* (Experimental : drop the ranking)
+- Don't use Accio when the snaffle is
+  - too close or too far from the wizard
+  - would be pulled away from goal to score

@@ -83,16 +83,13 @@ while (true) {
     }
   });
 
-  // Actions for each wizards
-  let actions = [];
-
   setClosestSnaffleData();
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
-      actions[i] = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
+      wizard.action = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
       continue;
     }
 
@@ -102,7 +99,7 @@ while (true) {
       snaffles.forEach((snaffle) => {
         if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
                               goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
-          actions[i] = petrificus(snaffle.id);
+          wizard.action = petrificus(snaffle.id);
           hasAction = true;
           return false;
         }
@@ -110,24 +107,22 @@ while (true) {
       if (hasAction) continue;
     }
 */
-    if (energy >= 20) {
-      const closestSnaffleGoal = getclosestEntity(goalToProtect.center, snaffles).entity;
-      actions[i] = accio(closestSnaffleGoal.id);
+    if (checkAccio(wizard)) {
       continue;
     }
 
     let closestSnaff = wizard.closestSnaffData.entity;
     let distanceWizSnaf = wizard.closestSnaffData.distance;
     if (closestSnaff) {
-      actions[i] = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
+      wizard.action = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
       continue;
     }
 
-    actions[i] = move(0, 0, 150); // TODO : PLACEHOLDER
+    wizard.action = move(0, 0, 150); // TODO : PLACEHOLDER
   }
 
-  actions.forEach(function (action) {
-    print(action);
+  wizards.forEach(function (wizard) {
+    print(wizard.action);
   });
 
   ++energy;
@@ -254,5 +249,35 @@ function setClosestSnaffleData () {
     wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
     wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargeted(wizardNeedChangeTarget);
     wizardNeedChangeTarget.closestSnaffData.entity.targetedBy = wizardNeedChangeTarget;
+  }
+}
+
+function checkAccio (wizard) {
+  if (energy < 20) {
+    return false;
+  }
+
+  for (let i = 0; i < snaffles.length; i++) {
+    let snaffle = snaffles[i];
+
+    // Don't use Accio when the snaffle would be pulled away from goal to score
+    if (goalToScore.center.x === 0) {
+      if (snaffle.x < wizard.x) {
+        continue;
+      }
+    } else {
+      if (snaffle.x > wizard.x) {
+        continue;
+      }
+    }
+
+    // Don't use Accio when the snaffle is too close or too far from the wizard
+    let distance = getDistance(wizard, snaffle);
+    if (distance < 1000 || distance > 6000) {
+      continue;
+    }
+
+    wizard.action = accio(snaffle.id);
+    return true;
   }
 }

@@ -83,70 +83,79 @@ while (true) {
     }
   });
 
+  // Actions for each wizards
+  let actions = [];
+
   setClosestSnaffleData();
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
-      throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
-    } else {
-      /*
-      let action = false;
-      if (energy >= 10) {
-        snaffles.forEach(function (snaffle) {
-          if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
-                                goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
-            petrificus(snaffle.id);
-            action = true;
-            return false;
-          }
-        });
-      }
-
-      if (action) continue;
-      */
-      if (energy >= 20) {
-        const closestSnaffleGoal = getclosestEntity(goalToProtect.center, snaffles).entity;
-        accio(closestSnaffleGoal.id);
-      } else {
-        let closestSnaff = wizard.closestSnaffData.entity;
-        let distanceWizSnaf = wizard.closestSnaffData.distance;
-        if (closestSnaff) {
-          move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
-        } else {
-          move(0, 0, 150); // TODO : PLACEHOLDER
-        }
-      }
+      actions[i] = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
+      continue;
     }
+
+/*
+    if (energy >= 10) {
+      let hasAction = false;
+      snaffles.forEach((snaffle) => {
+        if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
+                              goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+          actions[i] = petrificus(snaffle.id);
+          hasAction = true;
+          return false;
+        }
+      });
+      if (hasAction) continue;
+    }
+*/
+    if (energy >= 20) {
+      const closestSnaffleGoal = getclosestEntity(goalToProtect.center, snaffles).entity;
+      actions[i] = accio(closestSnaffleGoal.id);
+      continue;
+    }
+
+    let closestSnaff = wizard.closestSnaffData.entity;
+    let distanceWizSnaf = wizard.closestSnaffData.distance;
+    if (closestSnaff) {
+      actions[i] = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
+      continue;
+    }
+
+    actions[i] = move(0, 0, 150); // TODO : PLACEHOLDER
   }
+
+  actions.forEach(function (action) {
+    print(action);
+  });
 
   ++energy;
 }
 
 // Outputs functions
 function move (x, y, trust) {
-  print('MOVE ' + x + ' ' + y + ' ' + trust);
+  return ('MOVE ' + x + ' ' + y + ' ' + trust);
 }
 
 function throwSnaffle (x, y, trust) {
-  print('THROW ' + x + ' ' + y + ' ' + trust);
+  return ('THROW ' + x + ' ' + y + ' ' + trust);
 }
 function obliviate (entityId) {
-  launchSpell('OBLIVIATE', entityId, 5);
+  return launchSpell('OBLIVIATE', entityId, 5);
 }
 function petrificus (entityId) {
-  launchSpell('PETRIFICUS', entityId, 10);
+  return launchSpell('PETRIFICUS', entityId, 10);
 }
 function accio (entityId) {
-  launchSpell('ACCIO', entityId, 20);
+  return launchSpell('ACCIO', entityId, 20);
 }
 function flipendo (entityId) {
-  launchSpell('FLIPENDO', entityId, 20);
+  return launchSpell('FLIPENDO', entityId, 20);
 }
 function launchSpell (name, entityId, energyCost) {
-  print(name + ' ' + entityId);
   energy -= energyCost;
+  return (name + ' ' + entityId);
 }
 // Logs
 function debug (input) {

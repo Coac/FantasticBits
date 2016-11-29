@@ -118,7 +118,7 @@ while (true) {
       continue;
     }
 
-    wizard.action = move(0, 0, 150); // TODO : PLACEHOLDER
+    wizard.action = move(snaffles[0], snaffles[0], 150);
   }
 
   wizards.forEach(function (wizard) {

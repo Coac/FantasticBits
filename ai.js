@@ -113,12 +113,7 @@ while (true) {
 
     let closestSnaff = wizard.closestSnaffData.entity;
     let distanceWizSnaf = wizard.closestSnaffData.distance;
-    if (closestSnaff) {
-      wizard.action = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
-      continue;
-    }
-
-    wizard.action = move(snaffles[0], snaffles[0], 150);
+    wizard.action = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
   }
 
   wizards.forEach(function (wizard) {
@@ -231,9 +226,16 @@ function getclosestSnaffNotTargeted (wizard) {
 }
 
 function setClosestSnaffleData () {
+  if (snaffles.length === 1) {
+    for (let i = 0; i < wizards.length; i++) {
+      wizards[i].closestSnaffData = {distance: getDistance(wizards[i], snaffles[0]), entity: snaffles[0]};
+    }
+    return;
+  }
+
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
-    wizard.closestSnaffData = getclosestSnaffNotTargeted(wizard);
+    wizard.closestSnaffData = getclosestEntity(wizard, snaffles);
   }
 
   if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {

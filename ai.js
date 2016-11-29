@@ -24,7 +24,8 @@ const friction = {
   wizard: 0.75
 };
 
-var energy = 0;
+let energy = 0;
+
 // game loop
 while (true) {
   var wizards = [];
@@ -92,20 +93,10 @@ while (true) {
       continue;
     }
 
-/*
-    if (energy >= 10) {
-      let hasAction = false;
-      snaffles.forEach((snaffle) => {
-        if (lineIntersect(snaffle.x, snaffle.y, snaffle.x + snaffle.vx * 4, snaffle.y + snaffle.vy * 4,
-                              goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
-          wizard.action = petrificus(snaffle.id);
-          hasAction = true;
-          return false;
-        }
-      });
-      if (hasAction) continue;
+    if (checkPetrificus(wizard)) {
+      continue;
     }
-*/
+
     if (checkAccio(wizard)) {
       continue;
     }
@@ -317,4 +308,38 @@ function setSnaffleWillGoal () {
     }
   });
 }
+
+function checkPetrificus (wizard) {
+  if (energy < 10) {
+    return false;
+  }
+
+  let farestSnaff = null;
+  let maxDist = 0;
+
+  // Get the farest snaffle from enemies
+  snaffles.forEach(function (snaffle) {
+    if (snaffle.needStop) {
+      let minDistSnaffleEnemies = Infinity;
+      enemyWizards.forEach(function (enemyWizard) {
+        let dist = getDistance(enemyWizard, snaffle);
+        if (dist < minDistSnaffleEnemies) {
+          minDistSnaffleEnemies = dist;
+        }
+      });
+
+      if (minDistSnaffleEnemies > maxDist) {
+        maxDist = minDistSnaffleEnemies;
+        farestSnaff = snaffle;
+      }
+    }
+  });
+
+  if (farestSnaff && maxDist > 3000) {
+    farestSnaff.needStop = false;
+    wizard.action = petrificus(farestSnaff.id);
+    return true;
+  }
+
+  return false;
 }

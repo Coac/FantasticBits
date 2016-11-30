@@ -18,7 +18,9 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 - Use of Accio on the nearest snaffle of the ally goal
 
 ## Road to Gold
-- *Use petrificus to prevent a snaffle to enter inside our goal* (Experimental : drop the ranking)
+- Detect if a snaffle will enter into a goal
+- Use petrificus to prevent a snaffle to enter inside our goal
+- No need to move to the closest snaffle if it will goal
 - Don't use Accio when the snaffle is
   - too close or too far from the wizard
   - would be pulled away from goal to score

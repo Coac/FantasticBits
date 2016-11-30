@@ -201,12 +201,31 @@ function getclosestEntity (pos, entities) {
   return {distance: minDist, entity: closestEntity};
 }
 
-function getclosestSnaffNotTargeted (wizard) {
+function getclosestSnaffNotTargetedAndNotGoal (wizard) {
   let closestSnaff = null;
   let minDist = Infinity;
 
   snaffles.forEach(function (snaffle) {
-    if (!snaffle.targetedBy) {
+    if (!snaffle.targetedBy && !snaffle.willGoal) {
+      let distance = getDistance(wizard, snaffle);
+      if (distance < minDist) {
+        minDist = distance;
+        closestSnaff = snaffle;
+      }
+    }
+  });
+  if (closestSnaff !== null) {
+    closestSnaff.targetedBy = wizard;
+  }
+  return {distance: minDist, entity: closestSnaff};
+}
+
+function getclosestSnaffNotGoal (wizard) {
+  let closestSnaff = null;
+  let minDist = Infinity;
+
+  snaffles.forEach(function (snaffle) {
+    if (!snaffle.willGoal) {
       let distance = getDistance(wizard, snaffle);
       if (distance < minDist) {
         minDist = distance;
@@ -221,6 +240,7 @@ function getclosestSnaffNotTargeted (wizard) {
 }
 
 function setClosestSnaffleData () {
+  // If only one snaffle target it
   if (snaffles.length === 1) {
     for (let i = 0; i < wizards.length; i++) {
       wizards[i].closestSnaffData = {distance: getDistance(wizards[i], snaffles[0]), entity: snaffles[0]};
@@ -228,9 +248,27 @@ function setClosestSnaffleData () {
     return;
   }
 
+  // Or only one snaffle with not willGoal target it
+  let snaffleWithNotGoalCount = 0;
+  let snaffleWithNotGoal = null;
+  for (let i = 0; i < snaffles.length; i++) {
+    let snaffle = snaffles[i];
+    if (!snaffle.willGoal) {
+      snaffleWithNotGoal = snaffle;
+      ++snaffleWithNotGoalCount;
+      if (snaffleWithNotGoalCount > 1) break;
+    }
+  }
+  if (snaffleWithNotGoalCount === 1) {
+    for (let i = 0; i < wizards.length; i++) {
+      wizards[i].closestSnaffData = {distance: getDistance(wizards[i], snaffleWithNotGoal), entity: snaffleWithNotGoal};
+    }
+    return;
+  }
+
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
-    wizard.closestSnaffData = getclosestEntity(wizard, snaffles);
+    wizard.closestSnaffData = getclosestSnaffNotGoal(wizard);
   }
 
   if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {
@@ -244,7 +282,7 @@ function setClosestSnaffleData () {
       wizardNeedChangeTarget = wizards[1];
     }
     wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
-    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargeted(wizardNeedChangeTarget);
+    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargetedAndNotGoal(wizardNeedChangeTarget);
     wizardNeedChangeTarget.closestSnaffData.entity.targetedBy = wizardNeedChangeTarget;
   }
 }
@@ -309,8 +347,10 @@ function setSnaffleWillGoal () {
       snaffle.needStop = true;
     } else if (lineIntersect(snaffle.x, snaffle.y, newPos.x, newPos.y,
                           goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
-      debug('Snaffle ' + snaffle.id + ' will goal :)');
-      snaffle.willGoal = true;
+      if (getclosestEntity(snaffle, enemyWizards).distance > 1000) {
+        debug('Snaffle ' + snaffle.id + ' will goal :)');
+        snaffle.willGoal = true;
+      }
     }
   });
 }

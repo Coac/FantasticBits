@@ -292,7 +292,13 @@ function setSnaffleWillGoal () {
     let newVelocity = {x: snaffle.vx, y: snaffle.vy};
     let newPos = {x: snaffle.x, y: snaffle.y};
 
-    while (Math.abs(newVelocity.x) + Math.abs(newVelocity.y) > 300) {
+    if (lineIntersect(snaffle.x, snaffle.y, parseFloat(newPos.x) + parseFloat(newVelocity.x), parseFloat(newPos.y) + parseFloat(newVelocity.y),
+                          goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+      debug('Snaffle ' + snaffle.id + ' too fast, cant be stopped with petri');
+      return;
+    }
+
+    while (Math.abs(newVelocity.x) + Math.abs(newVelocity.y) > 100) {
       newPos = {x: parseFloat(newPos.x) + parseFloat(newVelocity.x), y: parseFloat(newPos.y) + parseFloat(newVelocity.y)};
       newVelocity = {x: round(newVelocity.x * friction.snaffle), y: round(newVelocity.y * friction.snaffle)};
     }

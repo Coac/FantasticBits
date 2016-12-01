@@ -38,9 +38,10 @@ while (true) {
   var enemyWizards = [];
   var snaffles = [];
   var bludgers = [];
+  var entities = [];
 
-  var entities = parseInt(readline()); // number of entities still in game
-  for (let i = 0; i < entities; i++) {
+  var entitiesCount = parseInt(readline()); // number of entities still in game
+  for (let i = 0; i < entitiesCount; i++) {
     var inputs = readline().split(' ');
     var entityId = parseInt(inputs[0]); // entity identifier
     var entityType = inputs[1]; // "WIZARD", "OPPONENT_WIZARD" or "SNAFFLE" (or "BLUDGER" after first league)
@@ -51,40 +52,57 @@ while (true) {
     var state = parseInt(inputs[6]); // 1 if the wizard is holding a Snaffle, 0 otherwise
 
     if (entityType === 'WIZARD') {
-      wizards.push({
+      let wizard = {
         id: entityId,
         x,
         y,
         vx,
         vy,
-        isHoldingSnaffe: state === 1
-      });
+        isHoldingSnaffe: state === 1,
+        size: size.wizard
+      };
+      wizards.push(wizard);
+      entities.push(wizard);
     } else if (entityType === 'OPPONENT_WIZARD') {
-      enemyWizards.push({
+      let enemyWizard = {
         id: entityId,
         x,
         y,
         vx,
         vy,
-        isHoldingSnaffe: state === 1
-      });
+        isHoldingSnaffe: state === 1,
+        size: size.wizard
+      };
+      enemyWizards.push(enemyWizard);
+      entities.push(enemyWizard);
     } else if (entityType === 'SNAFFLE') {
-      snaffles.push({
+      let snaffle = {
         id: entityId,
         x,
         y,
         vx,
-        vy
-      });
+        vy,
+        size: size.snaffle
+      };
+      snaffles.push(snaffle);
+      entities.push(snaffle);
     } else if (entityType === 'BLUDGER') {
-      bludgers.push({
+      let bludger = {
         id: entityId,
         x,
         y,
         vx,
-        vy
-      });
+        vy,
+        size: size.bludger
+      };
+      bludgers.push(bludger);
+      entities.push(bludger);
     }
+  }
+
+  for (let j = 0; j < snaffles.length; j++) {
+    debug('Snaffle Id :' + snaffles[j].id);
+    debug(willCollideNextTurn(snaffles[j], entities));
   }
 
   setSnaffleWillGoal();
@@ -234,11 +252,11 @@ function round (nb) {
 }
 
 // Utils functions
-function getclosestEntity (pos, entities) {
+function getclosestEntity (pos, _entities) {
   let closestEntity = null;
   let minDist = Infinity;
 
-  entities.forEach(function (entity) {
+  _entities.forEach(function (entity) {
     let distance = getDistance(pos, entity);
     if (distance < minDist) {
       minDist = distance;
@@ -439,4 +457,42 @@ function checkPetrificus (wizard) {
   }
 
   return false;
+}
+
+function willCollideNextTurn (snaffle_, entities_) {
+  // Clone entities to perform simulation (change x and y)
+  let snaffle = cloneEntity(snaffle_);
+  let entitiesCloned = [];
+  for (let j = 0; j < entities.length; j++) {
+    if (entities_[j].id === snaffle_.id) { continue; }
+    if (entities_[j].isHoldingSnaffe && getclosestEntity(entities_[j], snaffles).entity.id === snaffle_.id) {
+      continue;
+    }
+    entitiesCloned.push(cloneEntity(entities_[j]));
+  }
+
+  // Divide a Turn into step and check collision
+  for (let j = 0; j < entitiesCloned.length; j++) {
+    let entity = entitiesCloned[j];
+    let nbStep = 10;
+    for (let k = 0; k < nbStep; k++) {
+      snaffle.x += snaffle.vx / nbStep;
+      snaffle.y += snaffle.vy / nbStep;
+      entity.x += entity.vx / nbStep;
+      entity.y += entity.vy / nbStep;
+
+      if (isColliding(snaffle, entity)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function cloneEntity (entity) {
+  return {id: entity.id, x: entity.x, y: entity.y, vx: entity.vx, vy: entity.vy, size: entity.size};
+}
+
+function isColliding (entity1, entity2) {
+  return getDistance(entity1, entity2) < parseInt(entity1.size) + parseInt(entity2.size);
 }

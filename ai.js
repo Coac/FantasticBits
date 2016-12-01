@@ -140,8 +140,7 @@ while (true) {
     }
 
     let closestSnaff = wizard.closestSnaffData.entity;
-    let distanceWizSnaf = wizard.closestSnaffData.distance;
-    wizard.action = move(closestSnaff.x, closestSnaff.y, Math.min(Math.round(distanceWizSnaf / 10), 150));
+    wizard.action = move(closestSnaff.x, closestSnaff.y, 150);
   }
 
   wizards.forEach(function (wizard) {

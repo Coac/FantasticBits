@@ -4,16 +4,16 @@
  **/
 
 const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-
+const poleSize = 150;
 const leftGoal = {
   center: {x: 0, y: 3750},
-  point1: {x: 0, y: 1750},
-  point2: {x: 0, y: 5750}
+  point1: {x: 0, y: 1750 - poleSize},
+  point2: {x: 0, y: 5750 - poleSize}
 };
 const rightGoal = {
   center: {x: 16000, y: 3750},
-  point1: {x: 16000, y: 1750},
-  point2: {x: 16000, y: 5750}
+  point1: {x: 16000, y: 1750 - poleSize},
+  point2: {x: 16000, y: 5750 - poleSize}
 };
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;

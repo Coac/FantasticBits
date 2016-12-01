@@ -21,6 +21,7 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 - Detect if a snaffle will enter into a goal
 - Use petrificus to prevent a snaffle to enter inside our goal
 - No need to move to the closest snaffle if it will goal
+- Don't throw the snaffle in goal direction if there is an enemy on it
 - Don't use Accio when the snaffle is
   - too close or too far from the wizard
   - would be pulled away from goal to score

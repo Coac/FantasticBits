@@ -17,7 +17,7 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 - Ally wizards do not target the same snaffle
 - Use of Accio on the nearest snaffle of the ally goal
 
-## Road to Gold
+### Gold League
 - Detect if a snaffle will enter into a goal
 - Use petrificus to prevent a snaffle to enter inside our goal
 - No need to move to the closest snaffle if it will goal
@@ -25,3 +25,4 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 - Don't use Accio when the snaffle is
   - too close or too far from the wizard
   - would be pulled away from goal to score
+- Use Flipendo on snaffle that will goal

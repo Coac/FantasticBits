@@ -18,6 +18,12 @@ const rightGoal = {
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 
+const size = {
+  snaffle: 150,
+  bludger: 200,
+  wizard: 400
+};
+
 const friction = {
   snaffle: 0.75,
   bludger: 0.9,

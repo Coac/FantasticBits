@@ -349,7 +349,7 @@ function checkAccio (wizard) {
 
     // Don't use Accio when the snaffle is too close or too far from the wizard
     let distance = getDistance(wizard, snaffle);
-    if (distance < 1000 || distance > 6000) {
+    if (distance < 1000 || distance > 5000) {
       continue;
     }
 

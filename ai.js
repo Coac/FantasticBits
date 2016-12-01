@@ -353,7 +353,13 @@ function checkAccio (wizard) {
       continue;
     }
 
-    wizard.action = accio(snaffle.id);
+    // Don't use Accio on too much velocity
+    debug(Math.abs(snaffle.vx) + Math.abs(snaffle.y));
+    // if (Math.abs(snaffle.vx) + Math.abs(snaffle.y) > 1000) {
+    //   continue;
+    // }
+
+    wizard.action = accio(snaffle.id) + ' SnaffleVelocity :' + (Math.abs(snaffle.vx) + Math.abs(snaffle.y));
     return true;
   }
 

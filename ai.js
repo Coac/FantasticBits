@@ -274,9 +274,7 @@ function getclosestSnaffNotGoal (wizard) {
       }
     }
   });
-  if (closestSnaff !== null) {
-    closestSnaff.targetedBy = wizard;
-  }
+
   return {distance: minDist, entity: closestSnaff};
 }
 

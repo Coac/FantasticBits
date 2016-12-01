@@ -4,7 +4,7 @@
  **/
 
 const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-const poleSize = 150;
+const poleSize = 450;
 const leftGoal = {
   center: {x: 0, y: 3750},
   point1: {x: 0, y: 1750 - poleSize},
@@ -18,10 +18,23 @@ const rightGoal = {
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 
+const type = {
+  snaffle: 'SNAFFLE',
+  bludger: 'BLUDGER',
+  wizard: 'WIZARD',
+  enemyWizard: 'ENEMY_WIZARD'
+};
+
 const size = {
   snaffle: 150,
   bludger: 200,
   wizard: 400
+};
+
+const mass = {
+  snaffle: 0.5,
+  bludger: 8,
+  wizard: 1
 };
 
 const friction = {
@@ -59,7 +72,9 @@ while (true) {
         vx,
         vy,
         isHoldingSnaffe: state === 1,
-        size: size.wizard
+        size: size.wizard,
+        type: type.wizard,
+        friction: friction.wizard
       };
       wizards.push(wizard);
       entities.push(wizard);
@@ -71,7 +86,9 @@ while (true) {
         vx,
         vy,
         isHoldingSnaffe: state === 1,
-        size: size.wizard
+        size: size.wizard,
+        type: type.wizard,
+        friction: friction.wizard
       };
       enemyWizards.push(enemyWizard);
       entities.push(enemyWizard);
@@ -82,7 +99,9 @@ while (true) {
         y,
         vx,
         vy,
-        size: size.snaffle
+        size: size.snaffle,
+        type: type.snaffle,
+        friction: friction.snaffle
       };
       snaffles.push(snaffle);
       entities.push(snaffle);
@@ -93,16 +112,13 @@ while (true) {
         y,
         vx,
         vy,
-        size: size.bludger
+        size: size.bludger,
+        type: type.bludger,
+        friction: friction.bludger
       };
       bludgers.push(bludger);
       entities.push(bludger);
     }
-  }
-
-  for (let j = 0; j < snaffles.length; j++) {
-    debug('Snaffle Id :' + snaffles[j].id);
-    debug(willCollideNextTurn(snaffles[j], entities));
   }
 
   setSnaffleWillGoal();
@@ -132,6 +148,10 @@ while (true) {
     }
 
     if (checkPetrificus(wizard)) {
+      continue;
+    }
+
+    if (checkFlipendo(wizard)) {
       continue;
     }
 
@@ -247,7 +267,17 @@ function interceptOnCircle (p1, p2, c, r) {
 
 // Round half away from zero
 function round (nb) {
-  return nb.toFixed(0);
+  return parseInt(nb.toFixed(0));
+}
+
+function normalizedVector (v1, v2) {
+  let v = {x: v2.x - v1.x, y: v2.y - v1.y};
+  let norm = getNorm(v);
+  return {x: v.x / norm, y: v.y / norm};
+}
+
+function getNorm (v) {
+  return Math.sqrt(v.x * v.x + v.y * v.y);
 }
 
 // Utils functions
@@ -256,6 +286,7 @@ function getclosestEntity (pos, _entities) {
   let minDist = Infinity;
 
   _entities.forEach(function (entity) {
+    if (pos.id === entity.id) return;
     let distance = getDistance(pos, entity);
     if (distance < minDist) {
       minDist = distance;
@@ -350,7 +381,7 @@ function setClosestSnaffleData () {
 }
 
 function checkAccio (wizard) {
-  if (energy < 20) {
+  if (energy < 30) {
     return false;
   }
 
@@ -458,15 +489,91 @@ function checkPetrificus (wizard) {
   return false;
 }
 
+function checkFlipendo (wizard) {
+  if (energy < 20) {
+    return false;
+  }
+
+  for (let k = 0; k < snaffles.length; k++) {
+    let snaffle = snaffles[k];
+
+    if (getDistance(snaffle, wizard) < size.snaffle + size.wizard + 500) {
+      return false;
+    }
+
+    if (snaffle.willGoal) {
+      return false;
+    }
+
+    // -- Flipendo simul--
+
+    // clone entities
+    let clonedSnaffle = cloneEntity(snaffle);
+    let clonedWizard = cloneEntity(wizard);
+    let clonedEntities = [];
+    for (let i = 0; i < entities.length; i++) {
+      if (entities[i].id === clonedSnaffle.id || entities[i].id === clonedWizard.id) {
+        continue;
+      }
+      clonedEntities.push(cloneEntity(entities[i]));
+    }
+
+    // Spell trigger one turn after
+    applyMovement(clonedSnaffle);
+    applyMovement(clonedWizard);
+
+    applyFriction(clonedSnaffle);
+    applyFriction(clonedWizard);
+    for (let i = 0; i < clonedEntities.length; i++) {
+      applyMovement(clonedEntities[i]);
+      applyFriction(clonedEntities[i]);
+    }
+
+    // Apply thrust
+    let thrust = Math.min(6000 / Math.pow(getDistance(clonedSnaffle, clonedWizard) / 1000, 2), 1000);
+    let normalized = normalizedVector(clonedWizard, clonedSnaffle);
+    clonedSnaffle.vx = clonedSnaffle.vx + round(normalized.x * (thrust / mass.snaffle));
+    clonedSnaffle.vy = clonedSnaffle.vy + round(normalized.y * (thrust / mass.snaffle));
+
+    while (Math.abs(clonedSnaffle.vx) + Math.abs(clonedSnaffle.vy) > 300) {
+      if (willCollideNextTurn(clonedSnaffle, clonedEntities)) {
+        return false;
+      }
+      applyMovement(clonedSnaffle);
+      applyMovement(clonedWizard);
+      applyFriction(clonedSnaffle);
+      applyFriction(clonedWizard);
+      for (let i = 0; i < clonedEntities.length; i++) {
+        applyMovement(clonedEntities[i]);
+        applyFriction(clonedEntities[i]);
+      }
+    }
+
+    if (lineIntersect(snaffle.x, snaffle.y, clonedSnaffle.x, clonedSnaffle.y,
+                        goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
+      debug('Flipendo snaffle target position : ' + clonedSnaffle.x + ' ' + clonedSnaffle.y);
+      wizard.action = flipendo(snaffle.id);
+      return true;
+    }
+  }
+}
+
+function applyMovement (entity) {
+  entity.x = entity.x + entity.vx;
+  entity.y = entity.y + entity.vy;
+}
+function applyFriction (entity) {
+  entity.vx = round(entity.vx * entity.friction);
+  entity.vy = round(entity.vy * entity.friction);
+}
+
 function willCollideNextTurn (snaffle_, entities_) {
   // Clone entities to perform simulation (change x and y)
   let snaffle = cloneEntity(snaffle_);
   let entitiesCloned = [];
-  for (let j = 0; j < entities.length; j++) {
+  for (let j = 0; j < entities_.length; j++) {
     if (entities_[j].id === snaffle_.id) { continue; }
-    if (entities_[j].isHoldingSnaffe && getclosestEntity(entities_[j], snaffles).entity.id === snaffle_.id) {
-      continue;
-    }
+
     entitiesCloned.push(cloneEntity(entities_[j]));
   }
 
@@ -489,7 +596,7 @@ function willCollideNextTurn (snaffle_, entities_) {
 }
 
 function cloneEntity (entity) {
-  return {id: entity.id, x: entity.x, y: entity.y, vx: entity.vx, vy: entity.vy, size: entity.size};
+  return {id: entity.id, x: entity.x, y: entity.y, vx: entity.vx, vy: entity.vy, size: entity.size, friction: entity.friction, type: entity.type};
 }
 
 function isColliding (entity1, entity2) {

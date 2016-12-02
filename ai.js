@@ -4,7 +4,7 @@
  **/
 
 const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-const poleSize = 450;
+const poleSize = 600; // More than the true size to avoid bouncing on it
 const leftGoal = {
   center: {x: 0, y: 3750},
   point1: {x: 0, y: 1750 - poleSize},

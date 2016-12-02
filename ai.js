@@ -129,6 +129,12 @@ while (true) {
 
   setClosestSnaffleData();
 
+  computeBludgersThrust();
+  bludgers.forEach((bludger) => {
+    // applyMovement(bludger);
+    debug(bludger);
+  });
+
   for (var j = 0; j < snaffles.length; j++) {
     for (var i = 0; i < entities.length; i++) {
       if (snaffles[j] === entities[i]) continue;
@@ -764,4 +770,27 @@ function cloneEntity (entity) {
 
 function isColliding (entity1, entity2) {
   return getDistance(entity1, entity2) < parseInt(entity1.size) + parseInt(entity2.size);
+}
+
+function computeBludgersThrust () {
+  bludgers.forEach((bludger) => {
+    let possibleTargets = [];
+    wizards.forEach((wizard) => {
+      if (bludger.lastTarget === wizard) return;
+
+      possibleTargets.push(wizard);
+    });
+    enemyWizards.forEach((wizard) => {
+      if (bludger.lastTarget === wizard) return;
+
+      possibleTargets.push(wizard);
+    });
+
+    let target = getclosestEntity(bludger, possibleTargets).entity;
+
+    // Apply Bludger thrust
+    let normalized = normalizedVector(bludger, target);
+    bludger.vx = bludger.vx + round(normalized.x * (1000 / mass.bludger));
+    bludger.vy = bludger.vy + round(normalized.y * (1000 / mass.bludger));
+  });
 }

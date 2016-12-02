@@ -125,6 +125,23 @@ while (true) {
 
   setClosestSnaffleData();
 
+  for (var j = 0; j < snaffles.length; j++) {
+    for (var i = 0; i < entities.length; i++) {
+      if (snaffles[j] === entities[i]) continue;
+      willCollide(snaffles[j], entities[i]);
+    }
+
+    for (let k = leftGoal.point1.y; k < leftGoal.point2.y; k += 20) {
+      let goal = {id: 'leftGoal', x: 0, vx: 0, vy: 0, y: k, size: 20};
+      willCollide(snaffles[j], goal);
+    }
+
+    for (let k = rightGoal.point1.y; k < rightGoal.point2.y; k += 20) {
+      let goal = {id: 'rightGoal', x: 0, vx: 0, vy: 0, y: k, size: 20};
+      willCollide(snaffles[j], goal);
+    }
+  }
+
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
 
@@ -276,8 +293,106 @@ function normalizedVector (v1, v2) {
   return {x: v.x / norm, y: v.y / norm};
 }
 
+function normalizeVector (v) {
+  let norm = getNorm(v);
+  return {x: v.x / norm, y: v.y / norm};
+}
+
 function getNorm (v) {
   return Math.sqrt(v.x * v.x + v.y * v.y);
+}
+
+function dot (v1, v2) {
+  return (v1.x * v2.x + v1.y * v2.y);
+}
+
+// http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=2
+function willCollide (entityA, entityB) {
+  // Translate entityA movement to entityB become stationary
+  let moveVec = {x: entityA.vx - entityB.vx, y: entityA.vy - entityB.vy};
+
+  // Early Escape test: if the length of the movevec is less
+  // than distance between the centers of these circles minus
+  // their radii, there's no way they can hit.
+  // let moveVec = {x: entityA.vx, y: entityA.vy};
+  let dist = getDistance(entityA, entityB);
+  let sumRadii = (entityA.size + entityB.size);
+  dist -= sumRadii;
+  if (getNorm(moveVec) < dist) {
+    return false;
+  }
+
+  // Normalize the movevec
+  let N = normalizeVector(moveVec);
+
+  // Find C, the vector from the center of the moving
+  // circle A to the center of B
+  let C = {x: entityB.x - entityA.x, y: entityB.y - entityA.y};
+
+  // D = N . C = ||C|| * cos(angle between N and C)
+  let D = dot(C, N);
+
+  // Another early escape: Make sure that A is moving
+  // towards B! If the dot product between the movevec and
+  // B.center - A.center is less that or equal to 0,
+  // A isn't isn't moving towards B
+  if (D <= 0) {
+    return false;
+  }
+  // Find the length of the vector C
+  let lengthC = getNorm(C);
+
+  let F = (lengthC * lengthC) - (D * D);
+
+  // Escape test: if the closest that A will get to B
+  // is more than the sum of their radii, there's no
+  // way they are going collide
+  let sumRadiiSquared = sumRadii * sumRadii;
+  if (F >= sumRadiiSquared) {
+    return false;
+  }
+
+  // We now have F and sumRadii, two sides of a right triangle.
+  // Use these to find the third side, sqrt(T)
+  let T = sumRadiiSquared - F;
+
+  // If there is no such right triangle with sides length of
+  // sumRadii and sqrt(f), T will probably be less than 0.
+  // Better to check now than perform a square root of a
+  // negative number.
+  if (T < 0) {
+    return false;
+  }
+
+  // Therefore the distance the circle has to travel along
+  // movevec is D - sqrt(T)
+  let distance = D - Math.sqrt(T);
+
+  // Get the magnitude of the movement vector
+  let mag = getNorm(moveVec);
+
+  // Finally, make sure that the distance A has to move
+  // to touch B is not greater than the magnitude of the
+  // movement vector.
+  if (mag < distance) {
+    return false;
+  }
+
+  // Set the length of the movevec so that the circles will just
+  // touch
+
+  moveVec = normalizeVector(moveVec);
+  moveVec = {x: moveVec.x * distance, y: moveVec.y * distance};
+  let lengthOriginalMoveVec = {x: entityA.vx - entityB.vx, y: entityA.vy - entityB.vy};
+
+  let time = 0;
+  if (moveVec && getNorm(lengthOriginalMoveVec)) {
+    time = getNorm(moveVec) / getNorm(lengthOriginalMoveVec);
+  }
+
+  debug('Collision between ' + entityA.id + ' and ' + entityB.id + ' in ' + time);
+
+  return true;
 }
 
 // Utils functions

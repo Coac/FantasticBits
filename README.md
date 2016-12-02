@@ -26,3 +26,6 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
   - too close or too far from the wizard
   - would be pulled away from goal to score
 - Use Flipendo on snaffle that will goal
+
+### Road to Legend
+- Simulate next turn with collision

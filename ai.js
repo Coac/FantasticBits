@@ -74,7 +74,8 @@ while (true) {
         isHoldingSnaffe: state === 1,
         size: size.wizard,
         type: type.wizard,
-        friction: friction.wizard
+        friction: friction.wizard,
+        mass: mass.wizard
       };
       wizards.push(wizard);
       entities.push(wizard);
@@ -88,7 +89,8 @@ while (true) {
         isHoldingSnaffe: state === 1,
         size: size.wizard,
         type: type.wizard,
-        friction: friction.wizard
+        friction: friction.wizard,
+        mass: mass.wizard
       };
       enemyWizards.push(enemyWizard);
       entities.push(enemyWizard);
@@ -101,7 +103,8 @@ while (true) {
         vy,
         size: size.snaffle,
         type: type.snaffle,
-        friction: friction.snaffle
+        friction: friction.snaffle,
+        mass: mass.snaffle
       };
       snaffles.push(snaffle);
       entities.push(snaffle);
@@ -114,7 +117,8 @@ while (true) {
         vy,
         size: size.bludger,
         type: type.bludger,
-        friction: friction.bludger
+        friction: friction.bludger,
+        mass: mass.bludger
       };
       bludgers.push(bludger);
       entities.push(bludger);
@@ -128,16 +132,17 @@ while (true) {
   for (var j = 0; j < snaffles.length; j++) {
     for (var i = 0; i < entities.length; i++) {
       if (snaffles[j] === entities[i]) continue;
+      if (entities[i].type === type.wizard) continue;
       willCollide(snaffles[j], entities[i]);
     }
 
     for (let k = leftGoal.point1.y; k < leftGoal.point2.y; k += 20) {
-      let goal = {id: 'leftGoal', x: 0, vx: 0, vy: 0, y: k, size: 20};
+      let goal = {id: 'leftGoal', x: 0, vx: 0, vy: 0, y: k, size: 20, mass: 1};
       willCollide(snaffles[j], goal);
     }
 
     for (let k = rightGoal.point1.y; k < rightGoal.point2.y; k += 20) {
-      let goal = {id: 'rightGoal', x: 0, vx: 0, vy: 0, y: k, size: 20};
+      let goal = {id: 'rightGoal', x: 0, vx: 0, vy: 0, y: k, size: 20, mass: 1};
       willCollide(snaffles[j], goal);
     }
   }
@@ -306,6 +311,45 @@ function dot (v1, v2) {
   return (v1.x * v2.x + v1.y * v2.y);
 }
 
+function bounce (entity1, entity2) {
+  // First, find the normalized vector n from the center of
+  // circle1 to the center of circle2
+  let n = {x: entity2.x - entity1.x, y: entity2.y - entity1.y};
+
+  n = normalizeVector(n);
+  // Find the length of the component of each of the movement
+  // vectors along n.
+  // a1 = v1 . n
+  // a2 = v2 . n
+  let v1 = {x: entity1.vx, y: entity1.vy};
+  let v2 = {x: entity2.vx, y: entity2.vy};
+  let a1 = dot(v1, n);
+  let a2 = dot(v2, n);
+
+  // Using the optimized version,
+  // optimizedP =  2(a1 - a2)
+  //              -----------
+  //                m1 + m2
+  let optimizedP = (2.0 * (a1 - a2)) / (entity1.mass + entity2.mass);
+
+  // Calculate v1', the new movement vector of circle1
+  // v1' = v1 - optimizedP * m2 * n
+  let newVelocity1 = {};
+  newVelocity1.x = v1.x - optimizedP * entity2.mass * n.x;
+  newVelocity1.y = v1.y - optimizedP * entity2.mass * n.y;
+
+  // Calculate v1', the new movement vector of circle1
+  // v2' = v2 + optimizedP * m1 * n
+  let newVelocity2 = {};
+  newVelocity2.x = v2.x + optimizedP * entity1.mass * n.x;
+  newVelocity2.y = v2.y + optimizedP * entity1.mass * n.y;
+
+  entity1.vx = newVelocity1.x;
+  entity1.vy = newVelocity1.y;
+  entity2.vx = newVelocity2.x;
+  entity2.vy = newVelocity2.y;
+}
+
 // http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=2
 function willCollide (entityA, entityB) {
   // Translate entityA movement to entityB become stationary
@@ -385,12 +429,16 @@ function willCollide (entityA, entityB) {
   moveVec = {x: moveVec.x * distance, y: moveVec.y * distance};
   let lengthOriginalMoveVec = {x: entityA.vx - entityB.vx, y: entityA.vy - entityB.vy};
 
-  let time = 0;
-  if (moveVec && getNorm(lengthOriginalMoveVec)) {
-    time = getNorm(moveVec) / getNorm(lengthOriginalMoveVec);
-  }
+  let time = getNorm(moveVec) / getNorm(lengthOriginalMoveVec);
 
+  applyMovement(entityA, time);
+  applyMovement(entityB, time);
+  bounce(entityA, entityB);
+  applyMovement(entityA, 1 - time);
+  applyMovement(entityB, 1 - time);
   debug('Collision between ' + entityA.id + ' and ' + entityB.id + ' in ' + time);
+  debug('new ' + entityA.id + ' pos :' + entityA.x + ' ' + entityA.y);
+  debug('new ' + entityB.id + ' pos :' + entityB.x + ' ' + entityB.y);
 
   return true;
 }
@@ -673,9 +721,9 @@ function checkFlipendo (wizard) {
   }
 }
 
-function applyMovement (entity) {
-  entity.x = entity.x + entity.vx;
-  entity.y = entity.y + entity.vy;
+function applyMovement (entity, dt = 1) {
+  entity.x = entity.x + round(entity.vx * dt);
+  entity.y = entity.y + round(entity.vy * dt);
 }
 function applyFriction (entity) {
   entity.vx = round(entity.vx * entity.friction);

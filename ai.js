@@ -127,9 +127,11 @@ while (true) {
 
   setSnaffleWillGoal();
 
-  setClosestSnaffleData();
+  setClosestSnaffleData(wizards);
 
   computeBludgersThrust();
+
+  computeEnemiesAction();
   bludgers.forEach((bludger) => {
     // applyMovement(bludger);
     debug(bludger);
@@ -501,11 +503,11 @@ function getclosestSnaffNotGoal (wizard) {
   return {distance: minDist, entity: closestSnaff};
 }
 
-function setClosestSnaffleData () {
+function setClosestSnaffleData (_wizards) {
   // If only one snaffle target it
   if (snaffles.length === 1) {
-    for (let i = 0; i < wizards.length; i++) {
-      wizards[i].closestSnaffData = {distance: getDistance(wizards[i], snaffles[0]), entity: snaffles[0]};
+    for (let i = 0; i < _wizards.length; i++) {
+      _wizards[i].closestSnaffData = {distance: getDistance(_wizards[i], snaffles[0]), entity: snaffles[0]};
     }
     return;
   }
@@ -522,26 +524,26 @@ function setClosestSnaffleData () {
     }
   }
   if (snaffleWithNotGoalCount === 1) {
-    for (let i = 0; i < wizards.length; i++) {
-      wizards[i].closestSnaffData = {distance: getDistance(wizards[i], snaffleWithNotGoal), entity: snaffleWithNotGoal};
+    for (let i = 0; i < _wizards.length; i++) {
+      _wizards[i].closestSnaffData = {distance: getDistance(_wizards[i], snaffleWithNotGoal), entity: snaffleWithNotGoal};
     }
     return;
   }
 
-  for (let i = 0; i < wizards.length; i++) {
-    let wizard = wizards[i];
+  for (let i = 0; i < _wizards.length; i++) {
+    let wizard = _wizards[i];
     wizard.closestSnaffData = getclosestSnaffNotGoal(wizard);
   }
 
-  if (wizards[0].closestSnaffData.entity === wizards[1].closestSnaffData.entity) {
+  if (_wizards[0].closestSnaffData.entity === _wizards[1].closestSnaffData.entity) {
     let wizardWithRightTarget = null;
     let wizardNeedChangeTarget = null;
-    if (wizards[0].closestSnaffData.distance > wizards[1].closestSnaffData.distance) {
-      wizardWithRightTarget = wizards[1];
-      wizardNeedChangeTarget = wizards[0];
+    if (_wizards[0].closestSnaffData.distance > _wizards[1].closestSnaffData.distance) {
+      wizardWithRightTarget = _wizards[1];
+      wizardNeedChangeTarget = _wizards[0];
     } else {
-      wizardWithRightTarget = wizards[0];
-      wizardNeedChangeTarget = wizards[1];
+      wizardWithRightTarget = _wizards[0];
+      wizardNeedChangeTarget = _wizards[1];
     }
     wizardWithRightTarget.closestSnaffData.entity.targetedBy = wizardWithRightTarget;
     wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargetedAndNotGoal(wizardNeedChangeTarget);
@@ -793,4 +795,25 @@ function computeBludgersThrust () {
     bludger.vx = bludger.vx + round(normalized.x * (1000 / mass.bludger));
     bludger.vy = bludger.vy + round(normalized.y * (1000 / mass.bludger));
   });
+}
+
+function computeEnemiesAction () {
+  setClosestSnaffleData(enemyWizards);
+
+  for (let i = 0; i < enemyWizards.length; i++) {
+    let wizard = enemyWizards[i];
+    let snaffle = wizard.closestSnaffData.entity;
+
+    if (wizard.isHoldingSnaffe) {
+      wizard.action = throwSnaffle(goalToProtect.center.x, goalToProtect.center.y, 500);
+      let normalized = normalizedVector(snaffle, goalToProtect.center);
+      snaffle.vx = snaffle.vx + round(normalized.x * (500 / mass.snaffle));
+      snaffle.vy = snaffle.vy + round(normalized.y * (500 / mass.snaffle));
+    } else {
+      let normalized = normalizedVector(wizard, snaffle);
+      wizard.vx = wizard.vx + round(normalized.x * (150 / mass.wizard));
+      wizard.vy = wizard.vy + round(normalized.y * (150 / mass.wizard));
+    }
+    debug(wizard.id + ' ' + (wizard.x + wizard.vx) + ';' + (wizard.y + wizard.vy));
+  }
 }

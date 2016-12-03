@@ -574,7 +574,7 @@ function getclosestSnaffNotTargetedAndNotGoal (wizard) {
   let minDist = Infinity;
 
   snaffles.forEach(function (snaffle) {
-    if (!snaffle.targetedBy && !snaffle.willGoal) {
+    if (snaffle.targetedBy === undefined && !snaffle.willGoal) {
       let distance = wizard.dist(snaffle);
       if (distance < minDist) {
         minDist = distance;

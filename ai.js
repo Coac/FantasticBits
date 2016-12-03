@@ -45,6 +45,8 @@ const friction = {
 
 let energy = 0;
 
+var lastTargetIdBludger = [];
+
 // game loop
 while (true) {
   var wizards = [];
@@ -118,7 +120,8 @@ while (true) {
         size: size.bludger,
         type: type.bludger,
         friction: friction.bludger,
-        mass: mass.bludger
+        mass: mass.bludger,
+        lastTargetId: lastTargetIdBludger[entityId]
       };
       bludgers.push(bludger);
       entities.push(bludger);
@@ -132,28 +135,8 @@ while (true) {
   computeBludgersThrust();
 
   computeEnemiesAction();
-  bludgers.forEach((bludger) => {
-    // applyMovement(bludger);
-    debug(bludger);
-  });
 
-  for (var j = 0; j < snaffles.length; j++) {
-    for (var i = 0; i < entities.length; i++) {
-      if (snaffles[j] === entities[i]) continue;
-      if (entities[i].type === type.wizard) continue;
-      willCollide(snaffles[j], entities[i]);
-    }
-
-    for (let k = leftGoal.point1.y; k < leftGoal.point2.y; k += 20) {
-      let goal = {id: 'leftGoal', x: 0, vx: 0, vy: 0, y: k, size: 20, mass: 1};
-      willCollide(snaffles[j], goal);
-    }
-
-    for (let k = rightGoal.point1.y; k < rightGoal.point2.y; k += 20) {
-      let goal = {id: 'rightGoal', x: 0, vx: 0, vy: 0, y: k, size: 20, mass: 1};
-      willCollide(snaffles[j], goal);
-    }
-  }
+  simulateOneTurn();
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
@@ -439,16 +422,7 @@ function willCollide (entityA, entityB) {
 
   let time = getNorm(moveVec) / getNorm(lengthOriginalMoveVec);
 
-  applyMovement(entityA, time);
-  applyMovement(entityB, time);
-  bounce(entityA, entityB);
-  applyMovement(entityA, 1 - time);
-  applyMovement(entityB, 1 - time);
-  debug('Collision between ' + entityA.id + ' and ' + entityB.id + ' in ' + time);
-  debug('new ' + entityA.id + ' pos :' + entityA.x + ' ' + entityA.y);
-  debug('new ' + entityB.id + ' pos :' + entityB.x + ' ' + entityB.y);
-
-  return true;
+  return {time, entityA, entityB};
 }
 
 // Utils functions
@@ -783,12 +757,12 @@ function computeBludgersThrust () {
   bludgers.forEach((bludger) => {
     let possibleTargets = [];
     wizards.forEach((wizard) => {
-      if (bludger.lastTarget === wizard) return;
+      if (bludger.lastTargetId === wizard.id) return;
 
       possibleTargets.push(wizard);
     });
     enemyWizards.forEach((wizard) => {
-      if (bludger.lastTarget === wizard) return;
+      if (bludger.lastTargetId === wizard.id) return;
 
       possibleTargets.push(wizard);
     });
@@ -814,4 +788,59 @@ function computeEnemiesAction () {
       applyThrust(wizard, snaffle, 150);
     }
   }
+}
+
+function simulateOneTurn () {
+  let time = 0.0;
+  while (time < 1.0) {
+    let firstCollision = {time: Infinity};
+
+    for (var i = 0; i < bludgers.length; i++) {
+      let bludger1 = bludgers[i];
+      for (var j = i + 1; j < bludgers.length; j++) {
+        let bludger2 = bludgers[j];
+        let collision = willCollide(bludger1, bludger2);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      }
+
+      wizards.forEach(wizard => {
+        let collision = willCollide(bludger1, wizard);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      });
+
+      enemyWizards.forEach(wizard => {
+        let collision = willCollide(bludger1, wizard);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      });
+    }
+
+    // No more collision
+    if (firstCollision.time === Infinity) {
+      entities.forEach(entity => {
+        applyMovement(entity, 1.0 - time);
+      });
+      time = 1.0;
+    } else {
+      entities.forEach(entity => {
+        applyMovement(entity, firstCollision.time);
+      });
+      let entityA = firstCollision.entityA;
+      let entityB = firstCollision.entityB;
+      bounce(entityA, entityB);
+      if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
+        lastTargetIdBludger[entityA.id] = entityB.id;
+      }
+
+      time += firstCollision.time;
+    }
+  }
+  bludgers.forEach(bludger => {
+    debug(bludger);
+  });
 }

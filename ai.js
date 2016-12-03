@@ -782,17 +782,15 @@ function computeBludgersThrust () {
 }
 
 function computeEnemiesAction () {
-  setClosestSnaffleData(enemyWizards);
-
   for (let i = 0; i < enemyWizards.length; i++) {
-    let wizard = enemyWizards[i];
-    let snaffle = wizard.closestSnaffData.entity;
+    let enemy = enemyWizards[i];
+    let snaffle = getclosestEntity(enemy, snaffles).entity;
 
-    if (wizard.isHoldingSnaffe) {
-      wizard.action = throwSnaffle(goalToProtect.center.x, goalToProtect.center.y, 500);
+    if (enemy.isHoldingSnaffe) {
+      enemy.action = throwSnaffle(goalToProtect.center.x, goalToProtect.center.y, 500);
       applyThrust(snaffle, goalToProtect.center, 500);
     } else {
-      applyThrust(wizard, snaffle, 150);
+      applyThrust(enemy, snaffle, 150);
     }
   }
 }

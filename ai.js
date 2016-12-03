@@ -43,6 +43,40 @@ class Vector2 {
     this.x = x;
     this.y = y;
   }
+
+  clone () {
+    return new Vector2(this.x, this.y);
+  }
+
+  add (vec) {
+    return new Vector2(this.x + vec.x, this.y + vec.y);
+  }
+
+  sub (vec) {
+    return new Vector2(this.x - vec.x, this.y - vec.y);
+  }
+
+  mult (cst) {
+    return new Vector2(this.x * cst, this.y * cst);
+  }
+
+  dist (vec) {
+    return Math.sqrt((this.x - vec.x) * (this.x - vec.x) + (this.y - vec.y) * (this.y - vec.y));
+  }
+
+  normalizeDirection (vec) {
+    let v = new Vector2(vec.x - this.x, vec.y - this.y);
+    return v.normalize();
+  }
+
+  normalize () {
+    let norm = this.norm();
+    return new Vector2(this.x / norm, this.y / norm);
+  }
+
+  norm () {
+    return Math.sqrt(this.x * this.x + this.y * this.y);
+  }
 }
 
 class Entity {
@@ -50,15 +84,33 @@ class Entity {
     this.id = id;
     this.pos = new Vector2(x, y);
     this.vel = new Vector2(vx, vy);
-    this.x = x;
-    this.y = y;
-    this.vx = vx;
-    this.vy = vy;
+    // this.x = x;
+    // this.y = y;
+    // this.vx = vx;
+    // this.vy = vy;
     this.type = type;
     this.size = size;
     this.friction = friction;
     this.mass = mass;
   }
+
+  dist (entity) {
+    return this.pos.dist(entity.pos);
+  }
+
+  clone () {
+    return new Entity(this.id, this.type, this.pos.x, this.pos.y, this.vel.x, this.vel.y, this.size, this.friction, this.mass);
+  }
+
+  applyMovement (dt = 1) {
+    this.pos.x = this.pos.x + round(this.vel.x * dt);
+    this.pos.y = this.pos.y + round(this.vel.y * dt);
+  }
+  applyFriction () {
+    this.vel.x = round(this.vel.x * this.friction);
+    this.vel.y = round(this.vel.y * this.friction);
+  }
+
 }
 
 class AbstractWizard extends Entity {
@@ -146,20 +198,20 @@ while (true) {
 
   setClosestSnaffleData(wizards);
 
-  computeBludgersThrust();
+  //computeBludgersThrust();
 
-  computeEnemiesAction();
+  //computeEnemiesAction();
 
-  //simulateOneTurn(entities);
+  simulateOneTurn(entities);
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
 
     if (wizard.isHoldingSnaffe) {
-      let wizardNextPos = {x: parseInt(wizard.x) + parseInt(wizard.vx), y: parseInt(wizard.y) + parseInt(wizard.vy)};
+      let wizardNextPos = wizard.pos.add(wizard.vel);
       let needToHold = false;
       enemyWizards.forEach(function (enemy) {
-        let enemyNextPos = {x: parseInt(enemy.x) + parseInt(enemy.vx), y: parseInt(enemy.y) + parseInt(enemy.vy)};
+        let enemyNextPos = enemy.pos.add(enemy.vel);
         if (interceptOnCircle(goalToScore.center, wizardNextPos, enemyNextPos, 200)) {
           needToHold = true;
           return false;
@@ -187,7 +239,7 @@ while (true) {
     }
 
     let closestSnaff = getEntity(wizard.closestSnaffData.entityId);
-    wizard.action = move(closestSnaff.x, closestSnaff.y, 150);
+    wizard.action = move(closestSnaff.pos.x, closestSnaff.pos.y, 150);
   }
 
   wizards.forEach(function (wizard) {
@@ -303,11 +355,6 @@ function normalizedVector (v1, v2) {
   return {x: v.x / norm, y: v.y / norm};
 }
 
-function normalizeVector (v) {
-  let norm = getNorm(v);
-  return {x: v.x / norm, y: v.y / norm};
-}
-
 function getNorm (v) {
   return Math.sqrt(v.x * v.x + v.y * v.y);
 }
@@ -319,15 +366,15 @@ function dot (v1, v2) {
 function bounce (entity1, entity2) {
   // First, find the normalized vector n from the center of
   // circle1 to the center of circle2
-  let n = {x: entity2.x - entity1.x, y: entity2.y - entity1.y};
+  let n = entity2.pos.sub(entity1.pos);
 
-  n = normalizeVector(n);
+  n = n.normalize();
   // Find the length of the component of each of the movement
   // vectors along n.
   // a1 = v1 . n
   // a2 = v2 . n
-  let v1 = {x: entity1.vx, y: entity1.vy};
-  let v2 = {x: entity2.vx, y: entity2.vy};
+  let v1 = entity1.vel.clone();
+  let v2 = entity2.vel.clone();
   let a1 = dot(v1, n);
   let a2 = dot(v2, n);
 
@@ -349,34 +396,34 @@ function bounce (entity1, entity2) {
   newVelocity2.x = v2.x + optimizedP * entity1.mass * n.x;
   newVelocity2.y = v2.y + optimizedP * entity1.mass * n.y;
 
-  entity1.vx = round(newVelocity1.x);
-  entity1.vy = round(newVelocity1.y);
-  entity2.vx = round(newVelocity2.x);
-  entity2.vy = round(newVelocity2.y);
+  entity1.vel.x = round(newVelocity1.x);
+  entity1.vel.y = round(newVelocity1.y);
+  entity2.vel.x = round(newVelocity2.x);
+  entity2.vel.y = round(newVelocity2.y);
 }
 
 // http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=2
 function willCollide (entityA, entityB) {
   // Translate entityA movement to entityB become stationary
-  let moveVec = {x: entityA.vx - entityB.vx, y: entityA.vy - entityB.vy};
+  let moveVec = entityA.vel.sub(entityB.vel);
 
   // Early Escape test: if the length of the movevec is less
   // than distance between the centers of these circles minus
   // their radii, there's no way they can hit.
   // let moveVec = {x: entityA.vx, y: entityA.vy};
-  let dist = getDistance(entityA, entityB);
+  let dist = entityA.dist(entityB);
   let sumRadii = (entityA.size + entityB.size);
   dist -= sumRadii;
-  if (getNorm(moveVec) < dist) {
+  if (moveVec.norm() < dist) {
     return false;
   }
 
   // Normalize the movevec
-  let N = normalizeVector(moveVec);
+  let N = moveVec.normalize();
 
   // Find C, the vector from the center of the moving
   // circle A to the center of B
-  let C = {x: entityB.x - entityA.x, y: entityB.y - entityA.y};
+  let C = entityB.pos.sub(entityA.pos);
 
   // D = N . C = ||C|| * cos(angle between N and C)
   let D = dot(C, N);
@@ -389,7 +436,7 @@ function willCollide (entityA, entityB) {
     return false;
   }
   // Find the length of the vector C
-  let lengthC = getNorm(C);
+  let lengthC = C.norm();
 
   let F = (lengthC * lengthC) - (D * D);
 
@@ -418,7 +465,7 @@ function willCollide (entityA, entityB) {
   let distance = D - Math.sqrt(T);
 
   // Get the magnitude of the movement vector
-  let mag = getNorm(moveVec);
+  let mag = moveVec.norm();
 
   // Finally, make sure that the distance A has to move
   // to touch B is not greater than the magnitude of the
@@ -430,11 +477,11 @@ function willCollide (entityA, entityB) {
   // Set the length of the movevec so that the circles will just
   // touch
 
-  moveVec = normalizeVector(moveVec);
-  moveVec = {x: moveVec.x * distance, y: moveVec.y * distance};
-  let lengthOriginalMoveVec = {x: entityA.vx - entityB.vx, y: entityA.vy - entityB.vy};
+  moveVec = moveVec.normalize();
+  moveVec = moveVec.mult(distance);
+  let lengthOriginalMoveVec = entityA.vel.sub(entityB.vel);
 
-  let time = getNorm(moveVec) / getNorm(lengthOriginalMoveVec);
+  let time = moveVec.norm() / lengthOriginalMoveVec.norm();
 
   return {time, entityA, entityB};
 }
@@ -450,37 +497,37 @@ function applyWallBounce (coll) {
   }
 
   if (coll.wall === 'HORIZONTAL') {
-    coll.entity.vy = -coll.entity.vy;
+    coll.entity.vel.y = -coll.entity.vel.y;
   } else {
-    coll.entity.vx = -coll.entity.vx;
+    coll.entity.vel.x = -coll.entity.vel.x;
   }
 }
 function willCollideWithWall (entity) {
-  let nextPos = {x: entity.x + entity.vx, y: entity.y + entity.vy};
+  let nextPos = entity.pos.add(entity.vel);
   let dist;
   let distImpact;
   let wall = '';
   if (nextPos.y - entity.size < 0) {
-    dist = entity.y - nextPos.y;
-    distImpact = entity.y - entity.size;
+    dist = entity.pos.y - nextPos.y;
+    distImpact = entity.pos.y - entity.size;
     wall = 'HORIZONTAL';
   }
 
   if (nextPos.y + entity.size > 7501) {
-    dist = nextPos.y - entity.y;
+    dist = nextPos.y - entity.pos.y;
     distImpact = entity.y - (7501 - entity.size);
     wall = 'HORIZONTAL';
   }
 
   if (nextPos.x - entity.size < 0) {
-    dist = entity.x - nextPos.x;
-    distImpact = entity.x - entity.size;
+    dist = entity.pos.x - nextPos.x;
+    distImpact = entity.pos.x - entity.size;
     wall = 'VERTICAL';
   }
 
   if (nextPos.y + entity.size > 16001) {
-    dist = nextPos.x - entity.x;
-    distImpact = entity.x - (16001 - entity.size);
+    dist = nextPos.x - entity.pos.x;
+    distImpact = entity.pos.x - (16001 - entity.size);
     wall = 'VERTICAL';
   }
 
@@ -491,11 +538,11 @@ function willCollideWithWall (entity) {
   let goal = null;
   if (wall === 'VERTICAL' && entity.type === type.snaffle) {
     let snaffle = entity;
-    if (lineIntersect(snaffle.x, snaffle.y, nextPos.x, nextPos.y,
+    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, nextPos.x, nextPos.y,
                           goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
       goal = 'goalToProtect';
     }
-    if (lineIntersect(snaffle.x, snaffle.y, nextPos.x, nextPos.y,
+    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, nextPos.x, nextPos.y,
                           goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
       goal = 'goalToScore';
     }
@@ -505,13 +552,13 @@ function willCollideWithWall (entity) {
 }
 
 // Utils functions
-function getclosestEntity (pos, _entities) {
+function getclosestEntity (entity, _entities) {
   let closestEntity = null;
   let minDist = Infinity;
 
   _entities.forEach(function (entity) {
-    if (pos.id === entity.id) return;
-    let distance = getDistance(pos, entity);
+    if (entity.id === entity.id) return;
+    let distance = entity.dis(entity);
     if (distance < minDist) {
       minDist = distance;
       closestEntity = entity;
@@ -526,7 +573,7 @@ function getclosestSnaffNotTargetedAndNotGoal (wizard) {
 
   snaffles.forEach(function (snaffle) {
     if (!snaffle.targetedBy && !snaffle.willGoal) {
-      let distance = getDistance(wizard, snaffle);
+      let distance = wizard.dist(snaffle);
       if (distance < minDist) {
         minDist = distance;
         closestSnaff = snaffle;
@@ -545,7 +592,7 @@ function getclosestSnaffNotGoal (wizard) {
 
   snaffles.forEach(function (snaffle) {
     if (!snaffle.willGoal) {
-      let distance = getDistance(wizard, snaffle);
+      let distance = wizard.dist(snaffle);
       if (distance < minDist) {
         minDist = distance;
         closestSnaff = snaffle;
@@ -560,7 +607,7 @@ function setClosestSnaffleData (_wizards) {
   // If only one snaffle target it
   if (snaffles.length === 1) {
     for (let i = 0; i < _wizards.length; i++) {
-      _wizards[i].closestSnaffData = {distance: getDistance(_wizards[i], snaffles[0]), entityId: snaffles[0].id};
+      _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffles[0]), entityId: snaffles[0].id};
     }
     return;
   }
@@ -578,7 +625,7 @@ function setClosestSnaffleData (_wizards) {
   }
   if (snaffleWithNotGoalCount === 1) {
     for (let i = 0; i < _wizards.length; i++) {
-      _wizards[i].closestSnaffData = {distance: getDistance(_wizards[i], snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
+      _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
     }
     return;
   }
@@ -614,28 +661,22 @@ function checkAccio (wizard) {
 
     // Don't use Accio when the snaffle would be pulled away from goal to score
     if (goalToScore.center.x === 0) {
-      if (snaffle.x < wizard.x) {
+      if (snaffle.pos.x < wizard.pos.x) {
         continue;
       }
     } else {
-      if (snaffle.x > wizard.x) {
+      if (snaffle.pos.x > wizard.pos.x) {
         continue;
       }
     }
 
     // Don't use Accio when the snaffle is too close or too far from the wizard
-    let distance = getDistance(wizard, snaffle);
+    let distance = wizard.dist(snaffle);
     if (distance < 1000 || distance > 5000) {
       continue;
     }
 
-    // Don't use Accio on too much velocity
-    debug(Math.abs(snaffle.vx) + Math.abs(snaffle.y));
-    // if (Math.abs(snaffle.vx) + Math.abs(snaffle.y) > 1000) {
-    //   continue;
-    // }
-
-    wizard.action = accio(snaffle.id) + ' SnaffleVelocity :' + (Math.abs(snaffle.vx) + Math.abs(snaffle.y));
+    wizard.action = accio(snaffle.id);
     return true;
   }
 
@@ -650,10 +691,10 @@ function checkAccio (wizard) {
 */
 function setSnaffleWillGoal () {
   snaffles.forEach(function (snaffle) {
-    let newVelocity = {x: snaffle.vx, y: snaffle.vy};
-    let newPos = {x: snaffle.x, y: snaffle.y};
+    let newVelocity = snaffle.vel.clone();
+    let newPos = snaffle.pos.clone();
 
-    if (lineIntersect(snaffle.x, snaffle.y, parseInt(newPos.x) + parseInt(newVelocity.x), parseInt(newPos.y) + parseInt(newVelocity.y),
+    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, parseInt(newPos.x) + parseInt(newVelocity.x), parseInt(newPos.y) + parseInt(newVelocity.y),
                           goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
       debug('Snaffle ' + snaffle.id + ' too fast, cant be stopped with petri');
       return;
@@ -664,7 +705,7 @@ function setSnaffleWillGoal () {
       newVelocity = {x: round(newVelocity.x * friction.snaffle), y: round(newVelocity.y * friction.snaffle)};
     }
 
-    if (lineIntersect(snaffle.x, snaffle.y, newPos.x, newPos.y,
+    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, newPos.x, newPos.y,
                           goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
       debug('Snaffle ' + snaffle.id + ' risk, need to be stopped');
       snaffle.needStop = true;
@@ -690,8 +731,8 @@ function checkPetrificus (wizard) {
   snaffles.forEach(function (snaffle) {
     if (snaffle.needStop) {
       let minDistSnaffleEnemies = Infinity;
-      enemyWizards.forEach(function (enemyWizard) {
-        let dist = getDistance(enemyWizard, snaffle);
+      enemyWizards.forEach(enemyWizard => {
+        let dist = enemyWizard.dist(snaffle);
         if (dist < minDistSnaffleEnemies) {
           minDistSnaffleEnemies = dist;
         }
@@ -721,7 +762,7 @@ function checkFlipendo (wizard) {
   for (let k = 0; k < snaffles.length; k++) {
     let snaffle = snaffles[k];
 
-    if (getDistance(snaffle, wizard) < size.snaffle + size.wizard + 500) {
+    if (snaffle.dist(wizard) < size.snaffle + size.wizard + 500) {
       return false;
     }
 
@@ -732,64 +773,58 @@ function checkFlipendo (wizard) {
     // -- Flipendo simul--
 
     // clone entities
-    let clonedSnaffle = cloneEntity(snaffle);
-    let clonedWizard = cloneEntity(wizard);
+    let clonedSnaffle = snaffle.clone();
+    let clonedWizard = wizard.clone();
     let clonedEntities = [];
     for (let i = 0; i < entities.length; i++) {
       if (entities[i].id === clonedSnaffle.id || entities[i].id === clonedWizard.id) {
         continue;
       }
-      clonedEntities.push(cloneEntity(entities[i]));
+      clonedEntities.push(entities[i].clone());
     }
 
     // Spell trigger one turn after
-    applyMovement(clonedSnaffle);
-    applyMovement(clonedWizard);
+    clonedSnaffle.applyMovement();
+    clonedWizard.applyMovement();
 
-    applyFriction(clonedSnaffle);
-    applyFriction(clonedWizard);
+    clonedSnaffle.applyFriction();
+    clonedWizard.applyFriction();
     for (let i = 0; i < clonedEntities.length; i++) {
-      applyMovement(clonedEntities[i]);
-      applyFriction(clonedEntities[i]);
+      clonedEntities[i].applyMovement();
+      clonedEntities[i].applyFriction();
     }
 
-    // Apply thrust
-    let thrust = Math.min(6000 / Math.pow(getDistance(clonedSnaffle, clonedWizard) / 1000, 2), 1000);
-    let normalized = normalizedVector(clonedWizard, clonedSnaffle);
-    clonedSnaffle.vx = clonedSnaffle.vx + round(normalized.x * (thrust / mass.snaffle));
-    clonedSnaffle.vy = clonedSnaffle.vy + round(normalized.y * (thrust / mass.snaffle));
+    debug(snaffle);
 
-    while (Math.abs(clonedSnaffle.vx) + Math.abs(clonedSnaffle.vy) > 300) {
+    // Apply thrust
+    let thrust = Math.min(6000 / Math.pow(clonedSnaffle.dist(clonedWizard) / 1000, 2), 1000);
+    let normalized = clonedWizard.pos.normalizeDirection(clonedSnaffle.pos);
+    clonedSnaffle.vel.x = clonedSnaffle.vel.x + round(normalized.x * (thrust / mass.snaffle));
+    clonedSnaffle.vel.y = clonedSnaffle.vel.y + round(normalized.y * (thrust / mass.snaffle));
+
+    while (Math.abs(clonedSnaffle.vel.x) + Math.abs(clonedSnaffle.vel.y) > 300) {
       if (willCollideNextTurn(clonedSnaffle, clonedEntities)) {
         return false;
       }
-      applyMovement(clonedSnaffle);
-      applyMovement(clonedWizard);
-      applyFriction(clonedSnaffle);
-      applyFriction(clonedWizard);
+      clonedSnaffle.applyMovement();
+      clonedWizard.applyMovement();
+      clonedSnaffle.applyFriction();
+      clonedWizard.applyFriction();
       for (let i = 0; i < clonedEntities.length; i++) {
-        applyMovement(clonedEntities[i]);
-        applyFriction(clonedEntities[i]);
+        clonedEntities[i].applyMovement();
+        clonedEntities[i].applyFriction();
       }
     }
 
-    if (lineIntersect(snaffle.x, snaffle.y, clonedSnaffle.x, clonedSnaffle.y,
+    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, clonedSnaffle.pos.x, clonedSnaffle.pos.y,
                         goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
-      debug('Flipendo snaffle target position : ' + clonedSnaffle.x + ' ' + clonedSnaffle.y);
+      debug('Flipendo snaffle target position : ' + clonedSnaffle.pos.x + ' ' + clonedSnaffle.pos.y);
       wizard.action = flipendo(snaffle.id);
       return true;
     }
   }
 }
 
-function applyMovement (entity, dt = 1) {
-  entity.x = entity.x + round(entity.vx * dt);
-  entity.y = entity.y + round(entity.vy * dt);
-}
-function applyFriction (entity) {
-  entity.vx = round(entity.vx * entity.friction);
-  entity.vy = round(entity.vy * entity.friction);
-}
 function applyThrust (entity, target, thrust) {
   let normalized = normalizedVector(entity, target);
   entity.vx = entity.vx + round(normalized.x * (thrust / entity.mass));
@@ -798,12 +833,12 @@ function applyThrust (entity, target, thrust) {
 
 function willCollideNextTurn (snaffle_, entities_) {
   // Clone entities to perform simulation (change x and y)
-  let snaffle = cloneEntity(snaffle_);
+  let snaffle = snaffle_.clone();
   let entitiesCloned = [];
   for (let j = 0; j < entities_.length; j++) {
     if (entities_[j].id === snaffle_.id) { continue; }
 
-    entitiesCloned.push(cloneEntity(entities_[j]));
+    entitiesCloned.push(entities_[j].clone());
   }
 
   // Divide a Turn into step and check collision
@@ -811,10 +846,10 @@ function willCollideNextTurn (snaffle_, entities_) {
     let entity = entitiesCloned[j];
     let nbStep = 10;
     for (let k = 0; k < nbStep; k++) {
-      snaffle.x += snaffle.vx / nbStep;
-      snaffle.y += snaffle.vy / nbStep;
-      entity.x += entity.vx / nbStep;
-      entity.y += entity.vy / nbStep;
+      snaffle.pos.x += snaffle.vel.x / nbStep;
+      snaffle.pos.y += snaffle.vel.y / nbStep;
+      entity.pos.x += entity.vel.x / nbStep;
+      entity.pos.y += entity.vel.y / nbStep;
 
       if (isColliding(snaffle, entity)) {
         return true;
@@ -824,12 +859,8 @@ function willCollideNextTurn (snaffle_, entities_) {
   return false;
 }
 
-function cloneEntity (entity) {
-  return {id: entity.id, x: entity.x, y: entity.y, vx: entity.vx, vy: entity.vy, size: entity.size, friction: entity.friction, type: entity.type};
-}
-
 function isColliding (entity1, entity2) {
-  return getDistance(entity1, entity2) < parseInt(entity1.size) + parseInt(entity2.size);
+  return entity1.dist(entity2) < parseInt(entity1.size) + parseInt(entity2.size);
 }
 
 function computeBludgersThrust () {
@@ -976,12 +1007,12 @@ function simulateOneTurn (_entities) {
     // No more collision
     if (firstCollision.time === Infinity) {
       entities.forEach(entity => {
-        applyMovement(entity, 1.0 - time);
+        entity.applyMovement(1.0 - time);
       });
       time = 1.0;
     } else {
       entities.forEach(entity => {
-        applyMovement(entity, firstCollision.time);
+        entity.applyMovement(firstCollision.time);
       });
 
       if (firstCollision.wall) {
@@ -999,9 +1030,9 @@ function simulateOneTurn (_entities) {
     }
   }
 
-  // snaffles.forEach(snaffle => {
-  //   debug(snaffle.id + ' ' + snaffle.x + ' ' + snaffle.y);
-  // });
+  snaffles.forEach(snaffle => {
+    debug(snaffle);
+  });
 }
 
 function getEntity (id) {

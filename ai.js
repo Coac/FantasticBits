@@ -54,6 +54,7 @@ while (true) {
   var snaffles = [];
   var bludgers = [];
   var entities = [];
+  var allWizards = [];
 
   const entitiesCount = parseInt(readline()); // number of entities still in game
   for (let i = 0; i < entitiesCount; i++) {
@@ -127,6 +128,12 @@ while (true) {
       entities.push(bludger);
     }
   }
+  wizards.forEach(wizard => {
+    allWizards.push(wizard);
+  });
+  enemyWizards.forEach(wizard => {
+    allWizards.push(wizard);
+  });
 
   setSnaffleWillGoal();
 
@@ -335,10 +342,10 @@ function bounce (entity1, entity2) {
   newVelocity2.x = v2.x + optimizedP * entity1.mass * n.x;
   newVelocity2.y = v2.y + optimizedP * entity1.mass * n.y;
 
-  entity1.vx = newVelocity1.x;
-  entity1.vy = newVelocity1.y;
-  entity2.vx = newVelocity2.x;
-  entity2.vy = newVelocity2.y;
+  entity1.vx = round(newVelocity1.x);
+  entity1.vy = round(newVelocity1.y);
+  entity2.vx = round(newVelocity2.x);
+  entity2.vy = round(newVelocity2.y);
 }
 
 // http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php?page=2
@@ -795,9 +802,9 @@ function simulateOneTurn () {
   while (time < 1.0) {
     let firstCollision = {time: Infinity};
 
-    for (var i = 0; i < bludgers.length; i++) {
+    for (let i = 0; i < bludgers.length; i++) {
       let bludger1 = bludgers[i];
-      for (var j = i + 1; j < bludgers.length; j++) {
+      for (let j = i + 1; j < bludgers.length; j++) {
         let bludger2 = bludgers[j];
         let collision = willCollide(bludger1, bludger2);
         if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
@@ -805,19 +812,47 @@ function simulateOneTurn () {
         }
       }
 
-      wizards.forEach(wizard => {
+      allWizards.forEach(wizard => {
         let collision = willCollide(bludger1, wizard);
         if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
           firstCollision = collision;
         }
       });
 
-      enemyWizards.forEach(wizard => {
-        let collision = willCollide(bludger1, wizard);
+      snaffles.forEach(snaffle => {
+        let collision = willCollide(bludger1, snaffle);
         if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
           firstCollision = collision;
         }
       });
+    }
+
+    for (let i = 0; i < allWizards.length; i++) {
+      let wizard = allWizards[i];
+      for (let j = i + 1; j < allWizards.length; j++) {
+        let wizard2 = allWizards[j];
+        let collision = willCollide(wizard, wizard2);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      }
+      snaffles.forEach(snaffle => {
+        let collision = willCollide(wizard, snaffle);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      });
+    }
+
+    for (let i = 0; i < snaffles.length; i++) {
+      let snaffle = snaffles[i];
+      for (let j = i + 1; j < snaffles.length; j++) {
+        let snaffle2 = snaffles[j];
+        let collision = willCollide(snaffle, snaffle2);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+      }
     }
 
     // No more collision
@@ -840,7 +875,7 @@ function simulateOneTurn () {
       time += firstCollision.time;
     }
   }
-  bludgers.forEach(bludger => {
-    debug(bludger);
+  snaffles.forEach(snaffle => {
+    debug(snaffle.id + ' ' + snaffle.x + ' ' + snaffle.y);
   });
 }

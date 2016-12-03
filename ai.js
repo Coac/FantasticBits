@@ -143,7 +143,7 @@ while (true) {
 
   computeEnemiesAction();
 
-  simulateOneTurn();
+  simulateOneTurn(entities);
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
@@ -860,7 +860,37 @@ function computeEnemiesAction () {
   }
 }
 
-function simulateOneTurn () {
+function getEntitiesByType (_entities) {
+  let wizards = [];
+  let enemyWizards = [];
+  let snaffles = [];
+  let bludgers = [];
+  let allWizards = [];
+  _entities.forEach(entity => {
+    if (entity.type === type.wizard) {
+      enemyWizards.push(entity);
+      allWizards.push(entity);
+    } else if (entity.type === type.enemyWizard) {
+      wizards.push(entity);
+      allWizards.push(entity);
+    } else if (entity.type === type.snaffle) {
+      snaffles.push(entity);
+    } else if (entity.type === type.bludger) {
+      bludgers.push(entity);
+    }
+  });
+
+  return {wizards, enemyWizards, snaffles, bludgers, allWizards};
+}
+
+function simulateOneTurn (_entities) {
+  let datas = getEntitiesByType(_entities);
+  let wizards = datas.wizards;
+  let enemyWizards = datas.enemyWizards;
+  let snaffles = datas.snaffles;
+  let bludgers = datas.bludgers;
+  let allWizards = datas.allWizards;
+
   let time = 0.0;
   while (time < 1.0) {
     let firstCollision = {time: Infinity};
@@ -961,6 +991,7 @@ function simulateOneTurn () {
       time += firstCollision.time;
     }
   }
+
   snaffles.forEach(snaffle => {
     debug(snaffle.id + ' ' + snaffle.x + ' ' + snaffle.y);
   });

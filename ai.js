@@ -1,8 +1,3 @@
-/**
- * Grab Snaffles and try to throw them through the opponent's goal!
- * Move towards a Snaffle and use your team id to determine where you need to throw it.
- **/
-
 const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
 const poleSize = 600; // More than the true size to avoid bouncing on it
 const leftGoal = {
@@ -43,6 +38,61 @@ const friction = {
   wizard: 0.75
 };
 
+class Vector2 {
+  constructor (x, y) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+class Entity {
+  constructor (id, type, x, y, vx, vy, size, friction, mass) {
+    this.id = id;
+    this.pos = new Vector2(x, y);
+    this.vel = new Vector2(vx, vy);
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.type = type;
+    this.size = size;
+    this.friction = friction;
+    this.mass = mass;
+  }
+}
+
+class AbstractWizard extends Entity {
+  constructor (id, type, x, y, vx, vy, isHoldingSnaffe) {
+    super(id, type, x, y, vx, vy, size.wizard, friction.wizard, mass.wizard);
+    this.isHoldingSnaffe = isHoldingSnaffe;
+  }
+}
+
+class Wizard extends AbstractWizard {
+  constructor (id, x, y, vx, vy, isHoldingSnaffe) {
+    super(id, type.wizard, x, y, vx, vy, isHoldingSnaffe);
+  }
+}
+
+class EnemyWizard extends AbstractWizard {
+  constructor (id, x, y, vx, vy, isHoldingSnaffe) {
+    super(id, type.enemyWizard, x, y, vx, vy, isHoldingSnaffe);
+  }
+}
+
+class Bludger extends Entity {
+  constructor (id, x, y, vx, vy, lastTargetId) {
+    super(id, type.bludger, x, y, vx, vy, size.bludger, friction.bludger, mass.bludger);
+    this.lastTargetId = lastTargetId;
+  }
+}
+
+class Snaffle extends Entity {
+  constructor (id, x, y, vx, vy) {
+    super(id, type.snaffle, x, y, vx, vy, size.snaffle, friction.snaffle, mass.snaffle);
+  }
+}
+
 let energy = 0;
 
 var lastTargetIdBludger = [];
@@ -68,62 +118,19 @@ while (true) {
     const state = parseInt(inputs[6]); // 1 if the wizard is holding a Snaffle, 0 otherwise
 
     if (entityType === 'WIZARD') {
-      let wizard = {
-        id: entityId,
-        x,
-        y,
-        vx,
-        vy,
-        isHoldingSnaffe: state === 1,
-        size: size.wizard,
-        type: type.wizard,
-        friction: friction.wizard,
-        mass: mass.wizard
-      };
+      let wizard = new Wizard(entityId, x, y, vx, vy, state === 1);
       wizards.push(wizard);
       entities.push(wizard);
     } else if (entityType === 'OPPONENT_WIZARD') {
-      let enemyWizard = {
-        id: entityId,
-        x,
-        y,
-        vx,
-        vy,
-        isHoldingSnaffe: state === 1,
-        size: size.wizard,
-        type: type.wizard,
-        friction: friction.wizard,
-        mass: mass.wizard
-      };
+      let enemyWizard = new EnemyWizard(entityId, x, y, vx, vy, state === 1);
       enemyWizards.push(enemyWizard);
       entities.push(enemyWizard);
     } else if (entityType === 'SNAFFLE') {
-      let snaffle = {
-        id: entityId,
-        x,
-        y,
-        vx,
-        vy,
-        size: size.snaffle,
-        type: type.snaffle,
-        friction: friction.snaffle,
-        mass: mass.snaffle
-      };
+      let snaffle = new Snaffle(entityId, x, y, vx, vy);
       snaffles.push(snaffle);
       entities.push(snaffle);
     } else if (entityType === 'BLUDGER') {
-      let bludger = {
-        id: entityId,
-        x,
-        y,
-        vx,
-        vy,
-        size: size.bludger,
-        type: type.bludger,
-        friction: friction.bludger,
-        mass: mass.bludger,
-        lastTargetId: lastTargetIdBludger[entityId]
-      };
+      let bludger = new Bludger(entityId, x, y, vx, vy, lastTargetIdBludger[entityId]);
       bludgers.push(bludger);
       entities.push(bludger);
     }
@@ -143,7 +150,7 @@ while (true) {
 
   computeEnemiesAction();
 
-  simulateOneTurn(entities);
+  //simulateOneTurn(entities);
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
@@ -992,9 +999,9 @@ function simulateOneTurn (_entities) {
     }
   }
 
-  snaffles.forEach(snaffle => {
-    debug(snaffle.id + ' ' + snaffle.x + ' ' + snaffle.y);
-  });
+  // snaffles.forEach(snaffle => {
+  //   debug(snaffle.id + ' ' + snaffle.x + ' ' + snaffle.y);
+  // });
 }
 
 function getEntity (id) {

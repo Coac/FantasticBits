@@ -432,6 +432,71 @@ function willCollide (entityA, entityB) {
   return {time, entityA, entityB};
 }
 
+function applyWallBounce (coll) {
+  if (coll.goal === 'goalToScore') {
+    debug('GOAL :)');
+    return;
+  }
+  if (coll.goal === 'goalToProtect') {
+    debug('GOAL :(');
+    return;
+  }
+
+  if (coll.wall === 'HORIZONTAL') {
+    coll.entity.vy = -coll.entity.vy;
+  } else {
+    coll.entity.vx = -coll.entity.vx;
+  }
+}
+function willCollideWithWall (entity) {
+  let nextPos = {x: entity.x + entity.vx, y: entity.y + entity.vy};
+  let dist;
+  let distImpact;
+  let wall = '';
+  if (nextPos.y - entity.size < 0) {
+    dist = entity.y - nextPos.y;
+    distImpact = entity.y - entity.size;
+    wall = 'HORIZONTAL';
+  }
+
+  if (nextPos.y + entity.size > 7501) {
+    dist = nextPos.y - entity.y;
+    distImpact = entity.y - (7501 - entity.size);
+    wall = 'HORIZONTAL';
+  }
+
+  if (nextPos.x - entity.size < 0) {
+    dist = entity.x - nextPos.x;
+    distImpact = entity.x - entity.size;
+    wall = 'VERTICAL';
+  }
+
+  if (nextPos.y + entity.size > 16001) {
+    dist = nextPos.x - entity.x;
+    distImpact = entity.x - (16001 - entity.size);
+    wall = 'VERTICAL';
+  }
+
+  if (!dist || !distImpact) return false;
+
+  let time = Math.abs(distImpact / dist);
+
+  let goal = null;
+  if (wall === 'VERTICAL' && entity.type === type.snaffle) {
+    let snaffle = entity;
+    if (lineIntersect(snaffle.x, snaffle.y, nextPos.x, nextPos.y,
+                          goalToProtect.point1.x, goalToProtect.point1.y, goalToProtect.point2.x, goalToProtect.point2.y)) {
+      goal = 'goalToProtect';
+    }
+    if (lineIntersect(snaffle.x, snaffle.y, nextPos.x, nextPos.y,
+                          goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
+      goal = 'goalToScore';
+    }
+  }
+
+  return {time, entity, wall, goal};
+}
+
 // Utils functions
 function getclosestEntity (pos, _entities) {
   let closestEntity = null;
@@ -802,6 +867,12 @@ function simulateOneTurn () {
 
     for (let i = 0; i < bludgers.length; i++) {
       let bludger1 = bludgers[i];
+
+      let collision = willCollideWithWall(bludger1);
+      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+        firstCollision = collision;
+      }
+
       for (let j = i + 1; j < bludgers.length; j++) {
         let bludger2 = bludgers[j];
         let collision = willCollide(bludger1, bludger2);
@@ -827,6 +898,12 @@ function simulateOneTurn () {
 
     for (let i = 0; i < allWizards.length; i++) {
       let wizard = allWizards[i];
+
+      let collision = willCollideWithWall(wizard);
+      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+        firstCollision = collision;
+      }
+
       for (let j = i + 1; j < allWizards.length; j++) {
         let wizard2 = allWizards[j];
         let collision = willCollide(wizard, wizard2);
@@ -844,6 +921,12 @@ function simulateOneTurn () {
 
     for (let i = 0; i < snaffles.length; i++) {
       let snaffle = snaffles[i];
+
+      let collision = willCollideWithWall(snaffle);
+      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+        firstCollision = collision;
+      }
+
       for (let j = i + 1; j < snaffles.length; j++) {
         let snaffle2 = snaffles[j];
         let collision = willCollide(snaffle, snaffle2);
@@ -863,11 +946,16 @@ function simulateOneTurn () {
       entities.forEach(entity => {
         applyMovement(entity, firstCollision.time);
       });
-      let entityA = firstCollision.entityA;
-      let entityB = firstCollision.entityB;
-      bounce(entityA, entityB);
-      if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
-        lastTargetIdBludger[entityA.id] = entityB.id;
+
+      if (firstCollision.wall) {
+        applyWallBounce(firstCollision);
+      } else {
+        let entityA = firstCollision.entityA;
+        let entityB = firstCollision.entityB;
+        bounce(entityA, entityB);
+        if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
+          lastTargetIdBludger[entityA.id] = entityB.id;
+        }
       }
 
       time += firstCollision.time;

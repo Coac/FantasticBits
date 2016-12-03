@@ -737,6 +737,11 @@ function applyFriction (entity) {
   entity.vx = round(entity.vx * entity.friction);
   entity.vy = round(entity.vy * entity.friction);
 }
+function applyThrust (entity, target, thrust) {
+  let normalized = normalizedVector(entity, target);
+  entity.vx = entity.vx + round(normalized.x * (thrust / entity.mass));
+  entity.vy = entity.vy + round(normalized.y * (thrust / entity.mass));
+}
 
 function willCollideNextTurn (snaffle_, entities_) {
   // Clone entities to perform simulation (change x and y)
@@ -791,9 +796,7 @@ function computeBludgersThrust () {
     let target = getclosestEntity(bludger, possibleTargets).entity;
 
     // Apply Bludger thrust
-    let normalized = normalizedVector(bludger, target);
-    bludger.vx = bludger.vx + round(normalized.x * (1000 / mass.bludger));
-    bludger.vy = bludger.vy + round(normalized.y * (1000 / mass.bludger));
+    applyThrust(bludger, target, 1000);
   });
 }
 
@@ -806,14 +809,9 @@ function computeEnemiesAction () {
 
     if (wizard.isHoldingSnaffe) {
       wizard.action = throwSnaffle(goalToProtect.center.x, goalToProtect.center.y, 500);
-      let normalized = normalizedVector(snaffle, goalToProtect.center);
-      snaffle.vx = snaffle.vx + round(normalized.x * (500 / mass.snaffle));
-      snaffle.vy = snaffle.vy + round(normalized.y * (500 / mass.snaffle));
+      applyThrust(snaffle, goalToProtect.center, 500);
     } else {
-      let normalized = normalizedVector(wizard, snaffle);
-      wizard.vx = wizard.vx + round(normalized.x * (150 / mass.wizard));
-      wizard.vy = wizard.vy + round(normalized.y * (150 / mass.wizard));
+      applyThrust(wizard, snaffle, 150);
     }
-    debug(wizard.id + ' ' + (wizard.x + wizard.vx) + ';' + (wizard.y + wizard.vy));
   }
 }

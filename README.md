@@ -29,3 +29,4 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 
 ### Road to Legend
 - Simulate next turn with collision
+- Encapsulate the state to clone and simulate easily

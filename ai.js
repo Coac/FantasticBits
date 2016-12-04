@@ -315,11 +315,11 @@ class State {
     });
   }
 
-  setClosestSnaffleData (_wizards) {
+  setClosestSnaffleData () {
     // If only one snaffle target it
     if (this.snaffles.length === 1) {
-      for (let i = 0; i < _wizards.length; i++) {
-        _wizards[i].closestSnaffData = {distance: _wizards[i].dist(this.snaffles[0]), entityId: this.snaffles[0].id};
+      for (let i = 0; i < this.wizards.length; i++) {
+        this.wizards[i].closestSnaffData = {distance: this.wizards[i].dist(this.snaffles[0]), entityId: this.snaffles[0].id};
       }
       return;
     }
@@ -336,30 +336,30 @@ class State {
       }
     }
     if (snaffleWithNotGoalCount === 1) {
-      for (let i = 0; i < _wizards.length; i++) {
-        _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
+      for (let i = 0; i < this.wizards.length; i++) {
+        this.wizards[i].closestSnaffData = {distance: this.wizards[i].dist(snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
       }
       return;
     }
 
-    for (let i = 0; i < _wizards.length; i++) {
-      let wizard = _wizards[i];
+    for (let i = 0; i < this.wizards.length; i++) {
+      let wizard = this.wizards[i];
       wizard.closestSnaffData = this.getclosestSnaffNotGoal(wizard);
     }
 
-    if (_wizards[0].closestSnaffData.entityId === _wizards[1].closestSnaffData.entityId) {
+    if (this.wizards[0].closestSnaffData.entityId === this.wizards[1].closestSnaffData.entityId) {
       let wizardWithRightTarget = null;
       let wizardNeedChangeTarget = null;
-      if (_wizards[0].closestSnaffData.distance > _wizards[1].closestSnaffData.distance) {
-        wizardWithRightTarget = _wizards[1];
-        wizardNeedChangeTarget = _wizards[0];
+      if (this.wizards[0].closestSnaffData.distance > this.wizards[1].closestSnaffData.distance) {
+        wizardWithRightTarget = this.wizards[1];
+        wizardNeedChangeTarget = this.wizards[0];
       } else {
-        wizardWithRightTarget = _wizards[0];
-        wizardNeedChangeTarget = _wizards[1];
+        wizardWithRightTarget = this.wizards[0];
+        wizardNeedChangeTarget = this.wizards[1];
       }
-      getEntity(wizardWithRightTarget.closestSnaffData.entityId).targetedBy = wizardWithRightTarget.id;
+      this.getEntity(wizardWithRightTarget.closestSnaffData.entityId).targetedBy = wizardWithRightTarget.id;
       wizardNeedChangeTarget.closestSnaffData = this.getclosestSnaffNotTargetedAndNotGoal(wizardNeedChangeTarget);
-      getEntity(wizardNeedChangeTarget.closestSnaffData.entityId).targetedBy = wizardNeedChangeTarget.id;
+      this.getEntity(wizardNeedChangeTarget.closestSnaffData.entityId).targetedBy = wizardNeedChangeTarget.id;
     }
   }
 
@@ -435,6 +435,195 @@ class State {
     });
   }
 
+  checkAccio (wizard) {
+    if (energy < 30) {
+      return false;
+    }
+
+    for (let i = 0; i < this.snaffles.length; i++) {
+      let snaffle = this.snaffles[i];
+
+      // Don't use Accio when the snaffle would be pulled away from goal to score
+      if (goalToScore.center.x === 0) {
+        if (snaffle.pos.x < wizard.pos.x) {
+          continue;
+        }
+      } else {
+        if (snaffle.pos.x > wizard.pos.x) {
+          continue;
+        }
+      }
+
+      // Don't use Accio when the snaffle is too close or too far from the wizard
+      let distance = wizard.dist(snaffle);
+      if (distance < 1000 || distance > 5000) {
+        continue;
+      }
+
+      wizard.action = accio(snaffle.id);
+      return true;
+    }
+
+    return false;
+  }
+
+  checkFlipendo (wizard) {
+    if (energy < 20) {
+      return false;
+    }
+
+    for (let k = 0; k < this.snaffles.length; k++) {
+      let snaffle = this.snaffles[k];
+
+      if (snaffle.dist(wizard) < size.snaffle + size.wizard + 500) {
+        return false;
+      }
+
+      if (snaffle.willGoal) {
+        return false;
+      }
+
+      // -- Flipendo simul--
+
+      // clone entities
+      let clonedSnaffle = snaffle.clone();
+      let clonedWizard = wizard.clone();
+      let clonedEntities = [];
+      for (let i = 0; i < this.entities.length; i++) {
+        if (this.entities[i].id === clonedSnaffle.id || this.entities[i].id === clonedWizard.id) {
+          continue;
+        }
+        clonedEntities.push(this.entities[i].clone());
+      }
+
+      // Spell trigger one turn after
+      clonedSnaffle.applyMovement();
+      clonedWizard.applyMovement();
+
+      clonedSnaffle.applyFriction();
+      clonedWizard.applyFriction();
+      for (let i = 0; i < clonedEntities.length; i++) {
+        clonedEntities[i].applyMovement();
+        clonedEntities[i].applyFriction();
+      }
+
+      // Apply thrust
+      let thrust = Math.min(6000 / Math.pow(clonedSnaffle.dist(clonedWizard) / 1000, 2), 1000);
+      let normalized = clonedWizard.pos.normalizeDirection(clonedSnaffle.pos);
+
+      clonedSnaffle.vel.x = clonedSnaffle.vel.x + round(normalized.x * (thrust / mass.snaffle));
+      clonedSnaffle.vel.y = clonedSnaffle.vel.y + round(normalized.y * (thrust / mass.snaffle));
+
+      while (Math.abs(clonedSnaffle.vel.x) + Math.abs(clonedSnaffle.vel.y) > 300) {
+        if (willCollideNextTurn(clonedSnaffle, clonedEntities)) {
+          return false;
+        }
+        clonedSnaffle.applyMovement();
+        clonedWizard.applyMovement();
+        clonedSnaffle.applyFriction();
+        clonedWizard.applyFriction();
+        for (let i = 0; i < clonedEntities.length; i++) {
+          clonedEntities[i].applyMovement();
+          clonedEntities[i].applyFriction();
+        }
+      }
+
+      if (lineIntersect(snaffle.pos.x, snaffle.pos.y, clonedSnaffle.pos.x, clonedSnaffle.pos.y,
+                          goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
+        debug('Flipendo snaffle target position : ' + clonedSnaffle.pos.x + ' ' + clonedSnaffle.pos.y);
+        wizard.action = flipendo(snaffle.id);
+        return true;
+      }
+    }
+  }
+
+  checkPetrificus (wizard) {
+    if (energy < 10) {
+      return false;
+    }
+
+    let farestSnaff = null;
+    let maxDist = 0;
+
+    // Get the farest snaffle from enemies
+    this.snaffles.forEach(snaffle => {
+      if (snaffle.needStop) {
+        let minDistSnaffleEnemies = Infinity;
+        this.enemyWizards.forEach(enemyWizard => {
+          let dist = enemyWizard.dist(snaffle);
+          if (dist < minDistSnaffleEnemies) {
+            minDistSnaffleEnemies = dist;
+          }
+        });
+
+        if (minDistSnaffleEnemies > maxDist) {
+          maxDist = minDistSnaffleEnemies;
+          farestSnaff = snaffle;
+        }
+      }
+    });
+
+    if (farestSnaff && maxDist > 3000) {
+      farestSnaff.needStop = false;
+      wizard.action = petrificus(farestSnaff.id);
+      return true;
+    }
+
+    return false;
+  }
+
+  getEntity (id) {
+    for (let i = 0; i < this.entities.length; i++) {
+      if (this.entities[i].id === id) {
+        return this.entities[i];
+      }
+    }
+  }
+
+  computeWizardsAction () {
+    for (let i = 0; i < this.wizards.length; i++) {
+      let wizard = this.wizards[i];
+
+      if (wizard.isHoldingSnaffe) {
+        let wizardNextPos = wizard.pos.add(wizard.vel);
+        let needToHold = false;
+        this.enemyWizards.forEach(function (enemy) {
+          let enemyNextPos = enemy.pos.add(enemy.vel);
+          if (interceptOnCircle(goalToScore.center, wizardNextPos, enemyNextPos, 200)) {
+            needToHold = true;
+            return false;
+          }
+        });
+
+        if (needToHold) {
+          wizard.action = move(goalToScore.center.x, goalToScore.center.y, 150) + ' HOLD';
+        } else {
+          wizard.action = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
+        }
+        continue;
+      }
+
+      if (this.checkPetrificus(wizard)) {
+        continue;
+      }
+
+      if (this.checkFlipendo(wizard)) {
+        continue;
+      }
+
+      if (this.checkAccio(wizard)) {
+        continue;
+      }
+
+      let closestSnaff = this.getEntity(wizard.closestSnaffData.entityId);
+      wizard.action = move(closestSnaff.pos.x, closestSnaff.pos.y, 150);
+    }
+
+    this.wizards.forEach(wizard => {
+      print(wizard.action);
+    });
+  }
+
   evaluate () {
     return 1;
   }
@@ -452,14 +641,9 @@ let energy = 0;
 
 var lastTargetIdBludger = [];
 
-// game loop
+// Main
 while (true) {
-  var wizards = [];
-  var enemyWizards = [];
-  var snaffles = [];
-  var bludgers = [];
   var entities = [];
-  var allWizards = [];
 
   const entitiesCount = parseInt(readline()); // number of entities still in game
   for (let i = 0; i < entitiesCount; i++) {
@@ -474,34 +658,24 @@ while (true) {
 
     if (entityType === 'WIZARD') {
       let wizard = new Wizard(entityId, x, y, vx, vy, state === 1);
-      wizards.push(wizard);
       entities.push(wizard);
     } else if (entityType === 'OPPONENT_WIZARD') {
       let enemyWizard = new EnemyWizard(entityId, x, y, vx, vy, state === 1);
-      enemyWizards.push(enemyWizard);
       entities.push(enemyWizard);
     } else if (entityType === 'SNAFFLE') {
       let snaffle = new Snaffle(entityId, x, y, vx, vy);
-      snaffles.push(snaffle);
       entities.push(snaffle);
     } else if (entityType === 'BLUDGER') {
       let bludger = new Bludger(entityId, x, y, vx, vy, lastTargetIdBludger[entityId]);
-      bludgers.push(bludger);
       entities.push(bludger);
     }
   }
-  wizards.forEach(wizard => {
-    allWizards.push(wizard);
-  });
-  enemyWizards.forEach(wizard => {
-    allWizards.push(wizard);
-  });
 
   let state = new State(entities);
 
   state.setSnaffleWillGoal();
 
-  state.setClosestSnaffleData(wizards);
+  state.setClosestSnaffleData();
 
   state.computeBludgersThrust();
 
@@ -509,47 +683,7 @@ while (true) {
 
   state.clone().simulateOneTurn();
 
-  for (let i = 0; i < wizards.length; i++) {
-    let wizard = wizards[i];
-
-    if (wizard.isHoldingSnaffe) {
-      let wizardNextPos = wizard.pos.add(wizard.vel);
-      let needToHold = false;
-      enemyWizards.forEach(function (enemy) {
-        let enemyNextPos = enemy.pos.add(enemy.vel);
-        if (interceptOnCircle(goalToScore.center, wizardNextPos, enemyNextPos, 200)) {
-          needToHold = true;
-          return false;
-        }
-      });
-
-      if (needToHold) {
-        wizard.action = move(goalToScore.center.x, goalToScore.center.y, 150) + ' HOLD';
-      } else {
-        wizard.action = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
-      }
-      continue;
-    }
-
-    if (checkPetrificus(wizard)) {
-      continue;
-    }
-
-    if (checkFlipendo(wizard)) {
-      continue;
-    }
-
-    if (checkAccio(wizard)) {
-      continue;
-    }
-
-    let closestSnaff = getEntity(wizard.closestSnaffData.entityId);
-    wizard.action = move(closestSnaff.pos.x, closestSnaff.pos.y, 150);
-  }
-
-  wizards.forEach(function (wizard) {
-    print(wizard.action);
-  });
+  state.computeWizardsAction();
 
   ++energy;
 }
@@ -849,143 +983,6 @@ function getclosestEntity (entity1, _entities) {
   return {distance: minDist, entity: closestEntity};
 }
 
-function checkAccio (wizard) {
-  if (energy < 30) {
-    return false;
-  }
-
-  for (let i = 0; i < snaffles.length; i++) {
-    let snaffle = snaffles[i];
-
-    // Don't use Accio when the snaffle would be pulled away from goal to score
-    if (goalToScore.center.x === 0) {
-      if (snaffle.pos.x < wizard.pos.x) {
-        continue;
-      }
-    } else {
-      if (snaffle.pos.x > wizard.pos.x) {
-        continue;
-      }
-    }
-
-    // Don't use Accio when the snaffle is too close or too far from the wizard
-    let distance = wizard.dist(snaffle);
-    if (distance < 1000 || distance > 5000) {
-      continue;
-    }
-
-    wizard.action = accio(snaffle.id);
-    return true;
-  }
-
-  return false;
-}
-
-function checkPetrificus (wizard) {
-  if (energy < 10) {
-    return false;
-  }
-
-  let farestSnaff = null;
-  let maxDist = 0;
-
-  // Get the farest snaffle from enemies
-  snaffles.forEach(function (snaffle) {
-    if (snaffle.needStop) {
-      let minDistSnaffleEnemies = Infinity;
-      enemyWizards.forEach(enemyWizard => {
-        let dist = enemyWizard.dist(snaffle);
-        if (dist < minDistSnaffleEnemies) {
-          minDistSnaffleEnemies = dist;
-        }
-      });
-
-      if (minDistSnaffleEnemies > maxDist) {
-        maxDist = minDistSnaffleEnemies;
-        farestSnaff = snaffle;
-      }
-    }
-  });
-
-  if (farestSnaff && maxDist > 3000) {
-    farestSnaff.needStop = false;
-    wizard.action = petrificus(farestSnaff.id);
-    return true;
-  }
-
-  return false;
-}
-
-function checkFlipendo (wizard) {
-  if (energy < 20) {
-    return false;
-  }
-
-  for (let k = 0; k < snaffles.length; k++) {
-    let snaffle = snaffles[k];
-
-    if (snaffle.dist(wizard) < size.snaffle + size.wizard + 500) {
-      return false;
-    }
-
-    if (snaffle.willGoal) {
-      return false;
-    }
-
-    // -- Flipendo simul--
-
-    // clone entities
-    let clonedSnaffle = snaffle.clone();
-    let clonedWizard = wizard.clone();
-    let clonedEntities = [];
-    for (let i = 0; i < entities.length; i++) {
-      if (entities[i].id === clonedSnaffle.id || entities[i].id === clonedWizard.id) {
-        continue;
-      }
-      clonedEntities.push(entities[i].clone());
-    }
-
-    // Spell trigger one turn after
-    clonedSnaffle.applyMovement();
-    clonedWizard.applyMovement();
-
-    clonedSnaffle.applyFriction();
-    clonedWizard.applyFriction();
-    for (let i = 0; i < clonedEntities.length; i++) {
-      clonedEntities[i].applyMovement();
-      clonedEntities[i].applyFriction();
-    }
-
-    // Apply thrust
-    let thrust = Math.min(6000 / Math.pow(clonedSnaffle.dist(clonedWizard) / 1000, 2), 1000);
-    let normalized = clonedWizard.pos.normalizeDirection(clonedSnaffle.pos);
-
-    clonedSnaffle.vel.x = clonedSnaffle.vel.x + round(normalized.x * (thrust / mass.snaffle));
-    clonedSnaffle.vel.y = clonedSnaffle.vel.y + round(normalized.y * (thrust / mass.snaffle));
-
-    while (Math.abs(clonedSnaffle.vel.x) + Math.abs(clonedSnaffle.vel.y) > 300) {
-      if (willCollideNextTurn(clonedSnaffle, clonedEntities)) {
-        return false;
-      }
-      clonedSnaffle.applyMovement();
-      clonedWizard.applyMovement();
-      clonedSnaffle.applyFriction();
-      clonedWizard.applyFriction();
-      for (let i = 0; i < clonedEntities.length; i++) {
-        clonedEntities[i].applyMovement();
-        clonedEntities[i].applyFriction();
-      }
-    }
-
-    if (lineIntersect(snaffle.pos.x, snaffle.pos.y, clonedSnaffle.pos.x, clonedSnaffle.pos.y,
-                        goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
-      debug('Flipendo snaffle target position : ' + clonedSnaffle.pos.x + ' ' + clonedSnaffle.pos.y);
-      wizard.action = flipendo(snaffle.id);
-      return true;
-    }
-  }
-}
-
 function willCollideNextTurn (snaffle_, entities_) {
   // Clone entities to perform simulation (change x and y)
   let snaffle = snaffle_.clone();
@@ -1016,12 +1013,4 @@ function willCollideNextTurn (snaffle_, entities_) {
 
 function isColliding (entity1, entity2) {
   return entity1.dist(entity2) < parseInt(entity1.size) + parseInt(entity2.size);
-}
-
-function getEntity (id) {
-  for (var i = 0; i < entities.length; i++) {
-    if (entities[i].id === id) {
-      return entities[i];
-    }
-  }
 }

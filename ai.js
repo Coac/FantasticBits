@@ -13,6 +13,18 @@ const rightGoal = {
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
 const goalToProtect = myTeamId === 1 ? rightGoal : leftGoal;
 
+const spell = {
+  accio: {
+    cost: 20
+  },
+  flipendo: {
+    cost: 20
+  },
+  petrificus: {
+    cost: 10
+  }
+};
+
 const type = {
   snaffle: 'SNAFFLE',
   bludger: 'BLUDGER',
@@ -159,6 +171,8 @@ class State {
   constructor (entities) {
     this.score = 0;
     this.enemyScore = 0;
+    this.energy = 0;
+
     this.entities = entities;
     this.wizards = [];
     this.enemyWizards = [];
@@ -212,7 +226,6 @@ class State {
         }
         return true;
       });
-      debug(goaledSnaffles);
       goaledSnaffles.forEach(snaffle => {
         if (snaffle.pos.dist(goalToProtect.center) > snaffle.pos.dist(goalToScore.center)) {
           ++this.score;
@@ -238,9 +251,6 @@ class State {
         }
       });
     }
-
-    debug('[update] ' + this.score + ' ' + this.enemyScore);
-
     this.snaffles = newSnaffles;
   }
 
@@ -374,7 +384,6 @@ class State {
             this.snaffles.splice(this.snaffles.indexOf(firstCollision.entity), 1);
             ++this.enemyScore;
           }
-          debug('[turn] ' + this.score + ' ' + this.enemyScore);
         } else {
           let entityA = firstCollision.entityA;
           let entityB = firstCollision.entityB;
@@ -388,9 +397,13 @@ class State {
       }
     }
 
+    ++this.energy;
     this.snaffles.forEach(snaffle => {
       debug(snaffle);
     });
+
+    debug('[end] Score : ' + this.score + ' & EnemyScore : ' + this.enemyScore);
+    debug('[end] Energy : ' + this.energy);
   }
 
   setClosestSnaffleData () {
@@ -514,7 +527,7 @@ class State {
   }
 
   checkAccio (wizard) {
-    if (energy < 30) {
+    if (this.energy < spell.accio.cost + 10) {
       return false;
     }
 
@@ -539,6 +552,7 @@ class State {
       }
 
       wizard.action = accio(snaffle.id);
+      this.energy -= spell.accio.cost;
       return true;
     }
 
@@ -546,7 +560,7 @@ class State {
   }
 
   checkFlipendo (wizard) {
-    if (energy < 20) {
+    if (this.energy < spell.flipendo.cost) {
       return false;
     }
 
@@ -610,13 +624,14 @@ class State {
                           goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
         debug('Flipendo snaffle target position : ' + clonedSnaffle.pos.x + ' ' + clonedSnaffle.pos.y);
         wizard.action = flipendo(snaffle.id);
+        this.energy -= spell.flipendo.cost;
         return true;
       }
     }
   }
 
   checkPetrificus (wizard) {
-    if (energy < 10) {
+    if (this.energy < spell.petrificus.cost) {
       return false;
     }
 
@@ -644,6 +659,7 @@ class State {
     if (farestSnaff && maxDist > 3000) {
       farestSnaff.needStop = false;
       wizard.action = petrificus(farestSnaff.id);
+      this.energy -= spell.petrificus.cost;
       return true;
     }
 
@@ -714,11 +730,10 @@ class State {
     let clonedState = new State(clonedEnt);
     clonedState.score = this.score;
     clonedState.enemyScore = this.enemyScore;
+    clonedState.energy = this.energy;
     return clonedState;
   }
 }
-
-let energy = 0;
 
 var lastTargetIdBludger = [];
 
@@ -771,8 +786,6 @@ while (true) {
   state.computeWizardsAction();
 
   state.simulateOneTurn();
-
-  ++energy;
 }
 
 // Outputs functions
@@ -784,19 +797,18 @@ function throwSnaffle (x, y, trust) {
   return ('THROW ' + x + ' ' + y + ' ' + trust);
 }
 function obliviate (entityId) {
-  return launchSpell('OBLIVIATE', entityId, 5);
+  return launchSpell('OBLIVIATE', entityId);
 }
 function petrificus (entityId) {
-  return launchSpell('PETRIFICUS', entityId, 10);
+  return launchSpell('PETRIFICUS', entityId);
 }
 function accio (entityId) {
-  return launchSpell('ACCIO', entityId, 20);
+  return launchSpell('ACCIO', entityId);
 }
 function flipendo (entityId) {
-  return launchSpell('FLIPENDO', entityId, 20);
+  return launchSpell('FLIPENDO', entityId);
 }
-function launchSpell (name, entityId, energyCost) {
-  energy -= energyCost;
+function launchSpell (name, entityId) {
   return (name + ' ' + entityId);
 }
 // Logs

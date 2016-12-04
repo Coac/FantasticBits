@@ -77,6 +77,10 @@ class Vector2 {
   norm () {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
+
+  dot (vec) {
+    return (this.x * vec.x + this.y * vec.y);
+  }
 }
 
 class Entity {
@@ -565,20 +569,6 @@ function round (nb) {
   return parseInt(nb.toFixed(0));
 }
 
-function normalizedVector (v1, v2) {
-  let v = {x: v2.x - v1.x, y: v2.y - v1.y};
-  let norm = getNorm(v);
-  return {x: v.x / norm, y: v.y / norm};
-}
-
-function getNorm (v) {
-  return Math.sqrt(v.x * v.x + v.y * v.y);
-}
-
-function dot (v1, v2) {
-  return (v1.x * v2.x + v1.y * v2.y);
-}
-
 function bounce (entity1, entity2) {
   // First, find the normalized vector n from the center of
   // circle1 to the center of circle2
@@ -591,8 +581,8 @@ function bounce (entity1, entity2) {
   // a2 = v2 . n
   let v1 = entity1.vel.clone();
   let v2 = entity2.vel.clone();
-  let a1 = dot(v1, n);
-  let a2 = dot(v2, n);
+  let a1 = v1.dot(n);
+  let a2 = v2.dot(n);
 
   // Using the optimized version,
   // optimizedP =  2(a1 - a2)
@@ -642,7 +632,7 @@ function willCollide (entityA, entityB) {
   let C = entityB.pos.sub(entityA.pos);
 
   // D = N . C = ||C|| * cos(angle between N and C)
-  let D = dot(C, N);
+  let D = C.dot(N);
 
   // Another early escape: Make sure that A is moving
   // towards B! If the dot product between the movevec and

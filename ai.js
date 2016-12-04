@@ -1,13 +1,13 @@
-const myTeamId = parseInt(readline()); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-const poleSize = 600; // More than the true size to avoid bouncing on it
+const myTeamId = parseInt(readline());
+const poleSize = 450;
 const leftGoal = {
   center: {x: 0, y: 3750},
-  point1: {x: 0, y: 1750 - poleSize},
+  point1: {x: 0, y: 1750 + poleSize},
   point2: {x: 0, y: 5750 - poleSize}
 };
 const rightGoal = {
   center: {x: 16000, y: 3750},
-  point1: {x: 16000, y: 1750 - poleSize},
+  point1: {x: 16000, y: 1750 + poleSize},
   point2: {x: 16000, y: 5750 - poleSize}
 };
 const goalToScore = myTeamId === 1 ? leftGoal : rightGoal;
@@ -530,7 +530,7 @@ class State {
   }
 
   checkAccio (wizard) {
-    if (this.energy < spell.accio.cost + 10) {
+    if (this.energy < spell.accio.cost + 5) {
       return false;
     }
 
@@ -693,8 +693,12 @@ class State {
         });
 
         if (needToHold) {
-          wizard.action = move(goalToScore.center.x, goalToScore.center.y, 150) + ' HOLD';
-          wizard.applyThrust(goalToScore.center, 150);
+          // Holding strategy not efficient
+          // wizard.action = move(goalToScore.center.x, goalToScore.center.y, 150) + ' HOLD';
+          // wizard.applyThrust(goalToScore.center, 150);
+          wizard.action = throwSnaffle(goalToScore.point1.x, goalToScore.point1.y - 500, 500) + ' HOLD';
+          let snaffle = getclosestEntity(wizard, this.snaffles).entity;
+          snaffle.applyThrust(goalToScore.point1, 500);
         } else {
           wizard.action = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
           let snaffle = getclosestEntity(wizard, this.snaffles).entity;
@@ -746,7 +750,7 @@ let state = null;
 
 // Main
 while (true) {
-  var entities = [];
+  let entities = [];
 
   const entitiesCount = parseInt(readline()); // number of entities still in game
   for (let i = 0; i < entitiesCount; i++) {

@@ -157,6 +157,8 @@ class Snaffle extends Entity {
 
 class State {
   constructor (entities) {
+    this.score = 0;
+    this.enemyScore = 0;
     this.entities = entities;
     this.wizards = [];
     this.enemyWizards = [];
@@ -176,6 +178,70 @@ class State {
         this.bludgers.push(entity);
       }
     });
+  }
+
+  update (entities) {
+    let newSnaffles = [];
+
+    this.entities = entities;
+    this.wizards = [];
+    this.enemyWizards = [];
+    this.bludgers = [];
+    this.allWizards = [];
+    entities.forEach(entity => {
+      if (entity.type === type.wizard) {
+        this.wizards.push(entity);
+        this.allWizards.push(entity);
+      } else if (entity.type === type.enemyWizard) {
+        this.enemyWizards.push(entity);
+        this.allWizards.push(entity);
+      } else if (entity.type === type.snaffle) {
+        newSnaffles.push(entity);
+      } else if (entity.type === type.bludger) {
+        this.bludgers.push(entity);
+      }
+    });
+
+    // Update score
+    if (this.snaffles.length > newSnaffles.length) {
+      let goaledSnaffles = this.snaffles.filter(snaffle => {
+        for (let i = 0; i < newSnaffles.length; i++) {
+          if (newSnaffles[i].id === snaffle.id) {
+            return false;
+          }
+        }
+        return true;
+      });
+      debug(goaledSnaffles);
+      goaledSnaffles.forEach(snaffle => {
+        if (snaffle.pos.dist(goalToProtect.center) > snaffle.pos.dist(goalToScore.center)) {
+          ++this.score;
+        } else {
+          ++this.enemyScore;
+        }
+      });
+    } else if (this.snaffles.length < newSnaffles.length) {
+      let notGoaledSnaffles = newSnaffles.filter(snaffle => {
+        for (let i = 0; i < this.snaffles.length; i++) {
+          if (this.snaffles[i].id === snaffle.id) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      notGoaledSnaffles.forEach(snaffle => {
+        if (snaffle.pos.dist(goalToProtect.center) > snaffle.pos.dist(goalToScore.center)) {
+          --this.score;
+        } else {
+          --this.enemyScore;
+        }
+      });
+    }
+
+    debug('[update] ' + this.score + ' ' + this.enemyScore);
+
+    this.snaffles = newSnaffles;
   }
 
   computeBludgersThrust () {
@@ -297,6 +363,18 @@ class State {
 
         if (firstCollision.wall) {
           applyWallBounce(firstCollision);
+          if (firstCollision.goal === 'goalToScore') {
+            debug(firstCollision.entity.id + ' GOAL :)');
+            this.entities.splice(this.entities.indexOf(firstCollision.entity), 1);
+            this.snaffles.splice(this.snaffles.indexOf(firstCollision.entity), 1);
+            ++this.score; // Score increment can be wrong or not detected, this is corrected on update() method
+          } else if (firstCollision.goal === 'goalToProtect') {
+            debug(firstCollision.entity.id + ' GOAL :(');
+            this.entities.splice(this.entities.indexOf(firstCollision.entity), 1);
+            this.snaffles.splice(this.snaffles.indexOf(firstCollision.entity), 1);
+            ++this.enemyScore;
+          }
+          debug('[turn] ' + this.score + ' ' + this.enemyScore);
         } else {
           let entityA = firstCollision.entityA;
           let entityB = firstCollision.entityB;
@@ -427,7 +505,7 @@ class State {
         snaffle.needStop = true;
       } else if (lineIntersect(snaffle.x, snaffle.y, newPos.x, newPos.y,
                             goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
-        if (getclosestEntity(snaffle, enemyWizards).distance > 1000) {
+        if (getclosestEntity(snaffle, this.enemyWizards).distance > 1000) {
           debug('Snaffle ' + snaffle.id + ' will goal :)');
           snaffle.willGoal = true;
         }
@@ -633,13 +711,18 @@ class State {
     for (var i = 0; i < this.entities.length; i++) {
       clonedEnt.push(this.entities[i].clone());
     }
-    return new State(clonedEnt);
+    let clonedState = new State(clonedEnt);
+    clonedState.score = this.score;
+    clonedState.enemyScore = this.enemyScore;
+    return clonedState;
   }
 }
 
 let energy = 0;
 
 var lastTargetIdBludger = [];
+
+let state = null;
 
 // Main
 while (true) {
@@ -671,7 +754,11 @@ while (true) {
     }
   }
 
-  let state = new State(entities);
+  if (state) {
+    state.update(entities);
+  } else {
+    state = new State(entities);
+  }
 
   state.setSnaffleWillGoal();
 
@@ -681,9 +768,9 @@ while (true) {
 
   state.computeEnemiesAction();
 
-  state.clone().simulateOneTurn();
-
   state.computeWizardsAction();
+
+  state.simulateOneTurn();
 
   ++energy;
 }
@@ -903,21 +990,13 @@ function willCollide (entityA, entityB) {
 }
 
 function applyWallBounce (coll) {
-  if (coll.goal === 'goalToScore') {
-    debug('GOAL :)');
-    return;
-  }
-  if (coll.goal === 'goalToProtect') {
-    debug('GOAL :(');
-    return;
-  }
-
   if (coll.wall === 'HORIZONTAL') {
     coll.entity.vel.y = -coll.entity.vel.y;
   } else {
     coll.entity.vel.x = -coll.entity.vel.x;
   }
 }
+
 function willCollideWithWall (entity) {
   let nextPos = entity.pos.add(entity.vel);
   let dist;

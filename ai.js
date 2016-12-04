@@ -151,6 +151,225 @@ class Snaffle extends Entity {
   }
 }
 
+class State {
+  constructor (entities) {
+    this.entities = entities;
+    this.wizards = [];
+    this.enemyWizards = [];
+    this.snaffles = [];
+    this.bludgers = [];
+    this.allWizards = [];
+    this.entities.forEach(entity => {
+      if (entity.type === type.wizard) {
+        this.enemyWizards.push(entity);
+        this.allWizards.push(entity);
+      } else if (entity.type === type.enemyWizard) {
+        this.wizards.push(entity);
+        this.allWizards.push(entity);
+      } else if (entity.type === type.snaffle) {
+        this.snaffles.push(entity);
+      } else if (entity.type === type.bludger) {
+        this.bludgers.push(entity);
+      }
+    });
+  }
+
+  simulateOneTurn () {
+    let time = 0.0;
+    while (time < 1.0) {
+      let firstCollision = {time: Infinity};
+
+      for (let i = 0; i < this.bludgers.length; i++) {
+        let bludger1 = this.bludgers[i];
+
+        let collision = willCollideWithWall(bludger1);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+
+        for (let j = i + 1; j < this.bludgers.length; j++) {
+          let bludger2 = this.bludgers[j];
+          let collision = willCollide(bludger1, bludger2);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        }
+
+        this.allWizards.forEach(wizard => {
+          let collision = willCollide(bludger1, wizard);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        });
+
+        this.snaffles.forEach(snaffle => {
+          let collision = willCollide(bludger1, snaffle);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        });
+      }
+
+      for (let i = 0; i < this.allWizards.length; i++) {
+        let wizard = this.allWizards[i];
+
+        let collision = willCollideWithWall(wizard);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+
+        for (let j = i + 1; j < this.allWizards.length; j++) {
+          let wizard2 = this.allWizards[j];
+          let collision = willCollide(wizard, wizard2);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        }
+        this.snaffles.forEach(snaffle => {
+          let collision = willCollide(wizard, snaffle);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        });
+      }
+
+      for (let i = 0; i < this.snaffles.length; i++) {
+        let snaffle = this.snaffles[i];
+
+        let collision = willCollideWithWall(snaffle);
+        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+          firstCollision = collision;
+        }
+
+        for (let j = i + 1; j < this.snaffles.length; j++) {
+          let snaffle2 = this.snaffles[j];
+          let collision = willCollide(snaffle, snaffle2);
+          if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
+            firstCollision = collision;
+          }
+        }
+      }
+
+      // No more collision
+      if (firstCollision.time === Infinity) {
+        this.entities.forEach(entity => {
+          entity.applyMovement(1.0 - time);
+        });
+        time = 1.0;
+      } else {
+        this.entities.forEach(entity => {
+          entity.applyMovement(firstCollision.time);
+        });
+
+        if (firstCollision.wall) {
+          applyWallBounce(firstCollision);
+        } else {
+          let entityA = firstCollision.entityA;
+          let entityB = firstCollision.entityB;
+          bounce(entityA, entityB);
+          if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
+            lastTargetIdBludger[entityA.id] = entityB.id;
+          }
+        }
+
+        time += firstCollision.time;
+      }
+    }
+
+    this.snaffles.forEach(snaffle => {
+      debug(snaffle);
+    });
+  }
+
+  setClosestSnaffleData (_wizards) {
+    // If only one snaffle target it
+    if (this.snaffles.length === 1) {
+      for (let i = 0; i < _wizards.length; i++) {
+        _wizards[i].closestSnaffData = {distance: _wizards[i].dist(this.snaffles[0]), entityId: this.snaffles[0].id};
+      }
+      return;
+    }
+
+    // Or only one snaffle with not willGoal target it
+    let snaffleWithNotGoalCount = 0;
+    let snaffleWithNotGoal = null;
+    for (let i = 0; i < this.snaffles.length; i++) {
+      let snaffle = this.snaffles[i];
+      if (!snaffle.willGoal) {
+        snaffleWithNotGoal = snaffle;
+        ++snaffleWithNotGoalCount;
+        if (snaffleWithNotGoalCount > 1) break;
+      }
+    }
+    if (snaffleWithNotGoalCount === 1) {
+      for (let i = 0; i < _wizards.length; i++) {
+        _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
+      }
+      return;
+    }
+
+    for (let i = 0; i < _wizards.length; i++) {
+      let wizard = _wizards[i];
+      wizard.closestSnaffData = this.getclosestSnaffNotGoal(wizard);
+    }
+
+    if (_wizards[0].closestSnaffData.entityId === _wizards[1].closestSnaffData.entityId) {
+      let wizardWithRightTarget = null;
+      let wizardNeedChangeTarget = null;
+      if (_wizards[0].closestSnaffData.distance > _wizards[1].closestSnaffData.distance) {
+        wizardWithRightTarget = _wizards[1];
+        wizardNeedChangeTarget = _wizards[0];
+      } else {
+        wizardWithRightTarget = _wizards[0];
+        wizardNeedChangeTarget = _wizards[1];
+      }
+      getEntity(wizardWithRightTarget.closestSnaffData.entityId).targetedBy = wizardWithRightTarget.id;
+      wizardNeedChangeTarget.closestSnaffData = this.getclosestSnaffNotTargetedAndNotGoal(wizardNeedChangeTarget);
+      getEntity(wizardNeedChangeTarget.closestSnaffData.entityId).targetedBy = wizardNeedChangeTarget.id;
+    }
+  }
+
+  getclosestSnaffNotGoal (wizard) {
+    let closestSnaff = null;
+    let minDist = Infinity;
+
+    this.snaffles.forEach(snaffle => {
+      if (!snaffle.willGoal) {
+        let distance = wizard.dist(snaffle);
+        if (distance < minDist) {
+          minDist = distance;
+          closestSnaff = snaffle;
+        }
+      }
+    });
+
+    return {distance: minDist, entityId: closestSnaff.id};
+  }
+
+  getclosestSnaffNotTargetedAndNotGoal (wizard) {
+    let closestSnaff = null;
+    let minDist = Infinity;
+
+    this.snaffles.forEach(snaffle => {
+      if (snaffle.targetedBy === undefined && !snaffle.willGoal) {
+        let distance = wizard.dist(snaffle);
+        if (distance < minDist) {
+          minDist = distance;
+          closestSnaff = snaffle;
+        }
+      }
+    });
+    if (closestSnaff !== null) {
+      closestSnaff.targetedBy = wizard.id;
+    }
+    return {distance: minDist, entityId: closestSnaff.id};
+  }
+
+  evaluate () {
+    return 1;
+  }
+}
+
 let energy = 0;
 
 var lastTargetIdBludger = [];
@@ -202,13 +421,13 @@ while (true) {
 
   setSnaffleWillGoal();
 
-  setClosestSnaffleData(wizards);
+  new State(entities).setClosestSnaffleData(wizards);
 
   computeBludgersThrust();
 
   computeEnemiesAction();
 
-  simulateOneTurn(entities);
+  // new State(entities).simulateOneTurn();
 
   for (let i = 0; i < wizards.length; i++) {
     let wizard = wizards[i];
@@ -282,15 +501,6 @@ function launchSpell (name, entityId, energyCost) {
 // Logs
 function debug (input) {
   printErr(JSON.stringify(input));
-}
-
-// Maths functions
-function getDistance (pos1, pos2) {
-  let x1 = pos1.x;
-  let y1 = pos1.y;
-  let x2 = pos2.x;
-  let y2 = pos2.y;
-  return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
 function lineIntersect (x1, y1, x2, y2, x3, y3, x4, y4) {
@@ -573,90 +783,6 @@ function getclosestEntity (entity1, _entities) {
   return {distance: minDist, entity: closestEntity};
 }
 
-function getclosestSnaffNotTargetedAndNotGoal (wizard) {
-  let closestSnaff = null;
-  let minDist = Infinity;
-
-  snaffles.forEach(function (snaffle) {
-    if (snaffle.targetedBy === undefined && !snaffle.willGoal) {
-      let distance = wizard.dist(snaffle);
-      if (distance < minDist) {
-        minDist = distance;
-        closestSnaff = snaffle;
-      }
-    }
-  });
-  if (closestSnaff !== null) {
-    closestSnaff.targetedBy = wizard.id;
-  }
-  return {distance: minDist, entityId: closestSnaff.id};
-}
-
-function getclosestSnaffNotGoal (wizard) {
-  let closestSnaff = null;
-  let minDist = Infinity;
-
-  snaffles.forEach(function (snaffle) {
-    if (!snaffle.willGoal) {
-      let distance = wizard.dist(snaffle);
-      if (distance < minDist) {
-        minDist = distance;
-        closestSnaff = snaffle;
-      }
-    }
-  });
-
-  return {distance: minDist, entityId: closestSnaff.id};
-}
-
-function setClosestSnaffleData (_wizards) {
-  // If only one snaffle target it
-  if (snaffles.length === 1) {
-    for (let i = 0; i < _wizards.length; i++) {
-      _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffles[0]), entityId: snaffles[0].id};
-    }
-    return;
-  }
-
-  // Or only one snaffle with not willGoal target it
-  let snaffleWithNotGoalCount = 0;
-  let snaffleWithNotGoal = null;
-  for (let i = 0; i < snaffles.length; i++) {
-    let snaffle = snaffles[i];
-    if (!snaffle.willGoal) {
-      snaffleWithNotGoal = snaffle;
-      ++snaffleWithNotGoalCount;
-      if (snaffleWithNotGoalCount > 1) break;
-    }
-  }
-  if (snaffleWithNotGoalCount === 1) {
-    for (let i = 0; i < _wizards.length; i++) {
-      _wizards[i].closestSnaffData = {distance: _wizards[i].dist(snaffleWithNotGoal), entityId: snaffleWithNotGoal.id};
-    }
-    return;
-  }
-
-  for (let i = 0; i < _wizards.length; i++) {
-    let wizard = _wizards[i];
-    wizard.closestSnaffData = getclosestSnaffNotGoal(wizard);
-  }
-
-  if (_wizards[0].closestSnaffData.entityId === _wizards[1].closestSnaffData.entityId) {
-    let wizardWithRightTarget = null;
-    let wizardNeedChangeTarget = null;
-    if (_wizards[0].closestSnaffData.distance > _wizards[1].closestSnaffData.distance) {
-      wizardWithRightTarget = _wizards[1];
-      wizardNeedChangeTarget = _wizards[0];
-    } else {
-      wizardWithRightTarget = _wizards[0];
-      wizardNeedChangeTarget = _wizards[1];
-    }
-    getEntity(wizardWithRightTarget.closestSnaffData.entityId).targetedBy = wizardWithRightTarget.id;
-    wizardNeedChangeTarget.closestSnaffData = getclosestSnaffNotTargetedAndNotGoal(wizardNeedChangeTarget);
-    getEntity(wizardNeedChangeTarget.closestSnaffData.entityId).targetedBy = wizardNeedChangeTarget.id;
-  }
-}
-
 function checkAccio (wizard) {
   if (energy < 30) {
     return false;
@@ -803,6 +929,7 @@ function checkFlipendo (wizard) {
     // Apply thrust
     let thrust = Math.min(6000 / Math.pow(clonedSnaffle.dist(clonedWizard) / 1000, 2), 1000);
     let normalized = clonedWizard.pos.normalizeDirection(clonedSnaffle.pos);
+
     clonedSnaffle.vel.x = clonedSnaffle.vel.x + round(normalized.x * (thrust / mass.snaffle));
     clonedSnaffle.vel.y = clonedSnaffle.vel.y + round(normalized.y * (thrust / mass.snaffle));
 
@@ -819,6 +946,7 @@ function checkFlipendo (wizard) {
         clonedEntities[i].applyFriction();
       }
     }
+    debug(clonedSnaffle);
 
     if (lineIntersect(snaffle.pos.x, snaffle.pos.y, clonedSnaffle.pos.x, clonedSnaffle.pos.y,
                         goalToScore.point1.x, goalToScore.point1.y, goalToScore.point2.x, goalToScore.point2.y)) {
@@ -889,143 +1017,6 @@ function computeEnemiesAction () {
       enemy.applyThrust(snaffle.pos, 150);
     }
   }
-}
-
-function getEntitiesByType (_entities) {
-  let wizards = [];
-  let enemyWizards = [];
-  let snaffles = [];
-  let bludgers = [];
-  let allWizards = [];
-  _entities.forEach(entity => {
-    if (entity.type === type.wizard) {
-      enemyWizards.push(entity);
-      allWizards.push(entity);
-    } else if (entity.type === type.enemyWizard) {
-      wizards.push(entity);
-      allWizards.push(entity);
-    } else if (entity.type === type.snaffle) {
-      snaffles.push(entity);
-    } else if (entity.type === type.bludger) {
-      bludgers.push(entity);
-    }
-  });
-
-  return {wizards, enemyWizards, snaffles, bludgers, allWizards};
-}
-
-function simulateOneTurn (_entities) {
-  let datas = getEntitiesByType(_entities);
-  let wizards = datas.wizards;
-  let enemyWizards = datas.enemyWizards;
-  let snaffles = datas.snaffles;
-  let bludgers = datas.bludgers;
-  let allWizards = datas.allWizards;
-
-  let time = 0.0;
-  while (time < 1.0) {
-    let firstCollision = {time: Infinity};
-
-    for (let i = 0; i < bludgers.length; i++) {
-      let bludger1 = bludgers[i];
-
-      let collision = willCollideWithWall(bludger1);
-      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-        firstCollision = collision;
-      }
-
-      for (let j = i + 1; j < bludgers.length; j++) {
-        let bludger2 = bludgers[j];
-        let collision = willCollide(bludger1, bludger2);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      }
-
-      allWizards.forEach(wizard => {
-        let collision = willCollide(bludger1, wizard);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      });
-
-      snaffles.forEach(snaffle => {
-        let collision = willCollide(bludger1, snaffle);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      });
-    }
-
-    for (let i = 0; i < allWizards.length; i++) {
-      let wizard = allWizards[i];
-
-      let collision = willCollideWithWall(wizard);
-      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-        firstCollision = collision;
-      }
-
-      for (let j = i + 1; j < allWizards.length; j++) {
-        let wizard2 = allWizards[j];
-        let collision = willCollide(wizard, wizard2);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      }
-      snaffles.forEach(snaffle => {
-        let collision = willCollide(wizard, snaffle);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      });
-    }
-
-    for (let i = 0; i < snaffles.length; i++) {
-      let snaffle = snaffles[i];
-
-      let collision = willCollideWithWall(snaffle);
-      if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-        firstCollision = collision;
-      }
-
-      for (let j = i + 1; j < snaffles.length; j++) {
-        let snaffle2 = snaffles[j];
-        let collision = willCollide(snaffle, snaffle2);
-        if (collision && collision.time < firstCollision.time && collision.time + time < 1.0) {
-          firstCollision = collision;
-        }
-      }
-    }
-
-    // No more collision
-    if (firstCollision.time === Infinity) {
-      entities.forEach(entity => {
-        entity.applyMovement(1.0 - time);
-      });
-      time = 1.0;
-    } else {
-      entities.forEach(entity => {
-        entity.applyMovement(firstCollision.time);
-      });
-
-      if (firstCollision.wall) {
-        applyWallBounce(firstCollision);
-      } else {
-        let entityA = firstCollision.entityA;
-        let entityB = firstCollision.entityB;
-        bounce(entityA, entityB);
-        if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
-          lastTargetIdBludger[entityA.id] = entityB.id;
-        }
-      }
-
-      time += firstCollision.time;
-    }
-  }
-
-  snaffles.forEach(snaffle => {
-    debug(snaffle);
-  });
 }
 
 function getEntity (id) {

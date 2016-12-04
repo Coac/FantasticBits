@@ -730,7 +730,15 @@ class State {
   }
 
   evaluate () {
-    return 1;
+    let evaluation = 0;
+    this.snaffles.forEach(snaffle => {
+      evaluation += snaffle.pos.dist(goalToProtect.center) / 1000;
+    });
+
+    let scoreWeight = 1000;
+    evaluation += this.score * scoreWeight - this.enemyScore * scoreWeight;
+    debug(evaluation);
+    return evaluation;
   }
 
   clone () {

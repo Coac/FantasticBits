@@ -120,6 +120,10 @@ class AbstractWizard extends Entity {
     super(id, type, x, y, vx, vy, size.wizard, friction.wizard, mass.wizard);
     this.isHoldingSnaffe = isHoldingSnaffe;
   }
+
+  clone () {
+    return new AbstractWizard(this.id, this.type, this.pos.x, this.pos.y, this.vel.x, this.vel.y, this.isHoldingSnaffe);
+  }
 }
 
 class Wizard extends AbstractWizard {

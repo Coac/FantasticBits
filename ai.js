@@ -137,10 +137,13 @@ class AbstractWizard extends Entity {
   constructor (id, type, x, y, vx, vy, isHoldingSnaffe) {
     super(id, type, x, y, vx, vy, size.wizard, friction.wizard, mass.wizard);
     this.isHoldingSnaffe = isHoldingSnaffe;
+    this.holdingSnaffCD = 0;
   }
 
   clone () {
-    return new AbstractWizard(this.id, this.type, this.pos.x, this.pos.y, this.vel.x, this.vel.y, this.isHoldingSnaffe);
+    let cloned = new AbstractWizard(this.id, this.type, this.pos.x, this.pos.y, this.vel.x, this.vel.y, this.isHoldingSnaffe);
+    cloned.holdingSnaffCD = this.holdingSnaffCD;
+    return cloned;
   }
 }
 
@@ -403,12 +406,32 @@ class State {
     }
 
     ++this.energy;
+    this.updateHoldingSnaffe();
+    this.entities.forEach(entity => entity.applyFriction());
+
     // this.snaffles.forEach(snaffle => {
     //   debug(snaffle);
     // });
 
     // debug('[end] Score : ' + this.score + ' & EnemyScore : ' + this.enemyScore);
     // debug('[end] Energy : ' + this.energy);
+  }
+
+  updateHoldingSnaffe () {
+    this.allWizards.forEach(wizard => {
+      --wizard.holdingSnaffCD;
+      wizard.isHoldingSnaffe = false;
+      if (wizard.holdingSnaffCD <= 0) {
+        let data = getclosestEntity(wizard, this.snaffles).distance;
+        let snaffle = data.entity;
+        let dist = data.distance;
+        if (dist <= wizard.size) {
+          wizard.isHoldingSnaffe = true;
+          wizard.holdingSnaffCD = 3;
+          snaffle.pos = wizard.pos.clone();
+        }
+      }
+    });
   }
 
   setClosestSnaffleData () {
@@ -802,25 +825,22 @@ while (true) {
     state = new State(entities);
   }
 
-  state.setSnaffleWillGoal();
-
-  state.setClosestSnaffleData();
-
-  state.computeBludgersThrust();
-
-  state.computeEnemiesAction();
-
   let clonedState = state.clone();
-  for (var i = 0; i < 10 && !clonedState.isEnded(); i++) {
+  for (var i = 0; i < 2 && !clonedState.isEnded(); i++) {
     clonedState.setSnaffleWillGoal();
     clonedState.setClosestSnaffleData();
     clonedState.computeBludgersThrust();
     clonedState.computeEnemiesAction();
     clonedState.computeWizardsAction();
     clonedState.simulateOneTurn();
+    debug(clonedState.snaffles);
     clonedState.evaluate();
   }
 
+  state.setSnaffleWillGoal();
+  state.setClosestSnaffleData();
+  state.computeBludgersThrust();
+  state.computeEnemiesAction();
   state.computeWizardsAction();
   state.simulateOneTurn();
   state.evaluate();

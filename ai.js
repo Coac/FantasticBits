@@ -155,9 +155,8 @@ class EnemyWizard extends AbstractWizard {
 }
 
 class Bludger extends Entity {
-  constructor (id, x, y, vx, vy, lastTargetId) {
+  constructor (id, x, y, vx, vy) {
     super(id, type.bludger, x, y, vx, vy, size.bludger, friction.bludger, mass.bludger);
-    this.lastTargetId = lastTargetId;
   }
 }
 
@@ -197,10 +196,12 @@ class State {
   update (entities) {
     let newSnaffles = [];
 
+    let oldBludgers = this.bludgers;
+    this.bludgers = [];
+
     this.entities = entities;
     this.wizards = [];
     this.enemyWizards = [];
-    this.bludgers = [];
     this.allWizards = [];
     entities.forEach(entity => {
       if (entity.type === type.wizard) {
@@ -212,6 +213,8 @@ class State {
       } else if (entity.type === type.snaffle) {
         newSnaffles.push(entity);
       } else if (entity.type === type.bludger) {
+        let oldBludger = oldBludgers.find(bludger => bludger.id === entity.id);
+        entity.lastTargetId = oldBludger.lastTargetId;
         this.bludgers.push(entity);
       }
     });
@@ -389,7 +392,7 @@ class State {
           let entityB = firstCollision.entityB;
           bounce(entityA, entityB);
           if (entityA.type === type.bludger && (entityB.type === type.wizard || entityB.type === type.enemyWizard)) {
-            lastTargetIdBludger[entityA.id] = entityB.id;
+            entityA.lastTargetId = entityB.id;
           }
         }
 
@@ -739,8 +742,6 @@ class State {
   }
 }
 
-var lastTargetIdBludger = [];
-
 let state = null;
 
 // Main
@@ -768,7 +769,7 @@ while (true) {
       let snaffle = new Snaffle(entityId, x, y, vx, vy);
       entities.push(snaffle);
     } else if (entityType === 'BLUDGER') {
-      let bludger = new Bludger(entityId, x, y, vx, vy, lastTargetIdBludger[entityId]);
+      let bludger = new Bludger(entityId, x, y, vx, vy);
       entities.push(bludger);
     }
   }

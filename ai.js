@@ -1,3 +1,5 @@
+const DEBUG = true;
+
 const myTeamId = parseInt(readline());
 const poleSize = 450;
 const leftGoal = {
@@ -401,12 +403,12 @@ class State {
     }
 
     ++this.energy;
-    this.snaffles.forEach(snaffle => {
-      debug(snaffle);
-    });
+    // this.snaffles.forEach(snaffle => {
+    //   debug(snaffle);
+    // });
 
-    debug('[end] Score : ' + this.score + ' & EnemyScore : ' + this.enemyScore);
-    debug('[end] Energy : ' + this.energy);
+    // debug('[end] Score : ' + this.score + ' & EnemyScore : ' + this.enemyScore);
+    // debug('[end] Energy : ' + this.energy);
   }
 
   setClosestSnaffleData () {
@@ -471,7 +473,7 @@ class State {
       }
     });
 
-    return {distance: minDist, entityId: closestSnaff.id};
+    return {distance: minDist, entityId: closestSnaff ? closestSnaff.id : this.snaffles[0].id};
   }
 
   getclosestSnaffNotTargetedAndNotGoal (wizard) {
@@ -487,9 +489,11 @@ class State {
         }
       }
     });
-    if (closestSnaff !== null) {
-      closestSnaff.targetedBy = wizard.id;
+    if (closestSnaff === null) {
+      closestSnaff = this.snaffles[0];
     }
+    closestSnaff.targetedBy = wizard.id;
+
     return {distance: minDist, entityId: closestSnaff.id};
   }
 
@@ -723,7 +727,9 @@ class State {
       wizard.action = move(closestSnaff.pos.x, closestSnaff.pos.y, 150);
       wizard.applyThrust(goalToScore.center, 150);
     }
+  }
 
+  printWizardsAction () {
     this.wizards.forEach(wizard => {
       print(wizard.action);
     });
@@ -739,6 +745,10 @@ class State {
     evaluation += this.score * scoreWeight - this.enemyScore * scoreWeight;
     debug(evaluation);
     return evaluation;
+  }
+
+  isEnded () {
+    return this.snaffles.length === 0;
   }
 
   clone () {
@@ -800,9 +810,21 @@ while (true) {
 
   state.computeEnemiesAction();
 
-  state.computeWizardsAction();
+  let clonedState = state.clone();
+  for (var i = 0; i < 10 && !clonedState.isEnded(); i++) {
+    clonedState.setSnaffleWillGoal();
+    clonedState.setClosestSnaffleData();
+    clonedState.computeBludgersThrust();
+    clonedState.computeEnemiesAction();
+    clonedState.computeWizardsAction();
+    clonedState.simulateOneTurn();
+    clonedState.evaluate();
+  }
 
+  state.computeWizardsAction();
   state.simulateOneTurn();
+  state.evaluate();
+  state.printWizardsAction();
 }
 
 // Outputs functions
@@ -830,6 +852,7 @@ function launchSpell (name, entityId) {
 }
 // Logs
 function debug (input) {
+  if (!DEBUG) return;
   printErr(JSON.stringify(input));
 }
 

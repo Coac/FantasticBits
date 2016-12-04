@@ -681,7 +681,7 @@ class State {
       if (wizard.isHoldingSnaffe) {
         let wizardNextPos = wizard.pos.add(wizard.vel);
         let needToHold = false;
-        this.enemyWizards.forEach(function (enemy) {
+        this.enemyWizards.forEach(enemy => {
           let enemyNextPos = enemy.pos.add(enemy.vel);
           if (interceptOnCircle(goalToScore.center, wizardNextPos, enemyNextPos, 200)) {
             needToHold = true;
@@ -691,8 +691,11 @@ class State {
 
         if (needToHold) {
           wizard.action = move(goalToScore.center.x, goalToScore.center.y, 150) + ' HOLD';
+          wizard.applyThrust(goalToScore.center, 150);
         } else {
           wizard.action = throwSnaffle(goalToScore.center.x, goalToScore.center.y, 500);
+          let snaffle = getclosestEntity(wizard, this.snaffles).entity;
+          snaffle.applyThrust(goalToScore.center, 500);
         }
         continue;
       }
@@ -711,6 +714,7 @@ class State {
 
       let closestSnaff = this.getEntity(wizard.closestSnaffData.entityId);
       wizard.action = move(closestSnaff.pos.x, closestSnaff.pos.y, 150);
+      wizard.applyThrust(goalToScore.center, 150);
     }
 
     this.wizards.forEach(wizard => {

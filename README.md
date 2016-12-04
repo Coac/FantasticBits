@@ -1,5 +1,5 @@
 # FantasticBits
-[Codingame](https://www.codingame.com) FantasticBits AI in javascript
+[Codingame](https://www.codingame.com/leaderboards/challenge/fantastic-bits/global) FantasticBits AI in javascript
 
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 

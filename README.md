@@ -3,9 +3,8 @@
 
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 
-I managed to finish ~180th global, and top 30th in Gold League with this bot.
+I managed to finish ~180th global, and top 30th in Gold League with this bot.  
 Not enough time to use properly the simulation part (but it works !)
-![Gif match](match.gif)
 
 ## Tags
 The repository is organized with tags.  
@@ -33,3 +32,6 @@ For example, the [BronzeLeague tag](https://github.com/Coac/FantasticBits/tree/B
 ### Road to Legend
 - Simulate next turn with collision
 - Encapsulate the state to clone and simulate easily
+
+
+![Gif match](match.gif)
